@@ -18,7 +18,9 @@ model Orden {
   comentario      String?   @db.Text
   estadoAnulacion String?   @map("estado_anulacion")
   tecnicoId       String?   @map("tecnico_id")
-  tecnico         Usuario?  @relation(fields: [tecnicoId], references: [id], onDelete: SetNull)
+  tecnico         Usuario?  @relation("OrdenesAsignadas", fields: [tecnicoId], references: [id], onDelete: SetNull)
+  recuperadoPorId String?   @map("recuperado_por_id")
+  recuperadoPor   Usuario?  @relation("OrdenesRecuperadas", fields: [recuperadoPorId], references: [id], onDelete: SetNull)
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -29,21 +31,23 @@ model Orden {
   @@index([createdAt])
   @@index([estadoAnulacion])
   @@index([tecnicoId])
+  @@index([recuperadoPorId])
   @@map("ordenes")
 }
 
 model Usuario {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  nombre       String
-  passwordHash String   @map("password_hash")
-  rol          String   @default("operador")
-  activo       Boolean  @default(true)
-  telefono     String?
-  zona         String?
-  ordenes      Orden[]
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  email          String   @unique
+  nombre         String
+  passwordHash   String   @map("password_hash")
+  rol            String   @default("operador")
+  activo         Boolean  @default(true)
+  telefono       String?
+  zona           String?
+  ordenes        Orden[]  @relation("OrdenesAsignadas")
+  recuperaciones Orden[]  @relation("OrdenesRecuperadas")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@index([email])
   @@index([rol])

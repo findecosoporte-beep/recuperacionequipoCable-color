@@ -72,6 +72,7 @@ export const listQuerySchema = z.object({
   orden: emptyToUndefined(50),
   estado: z.enum(["recuperada", "por_recuperar", "por_anular", "anulada"]).optional(),
   tecnicoId: emptyToUndefined(40),
+  recuperadoPorId: emptyToUndefined(40),
   asignacion: z.enum(["sin_asignar", "asignada"]).optional(),
   sort: z.enum(["createdAt", "orden", "cliente", "ciudad"]).default("createdAt"),
   order: z.enum(["asc", "desc"]).default("desc"),

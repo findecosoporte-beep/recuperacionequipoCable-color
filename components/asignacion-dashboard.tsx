@@ -100,7 +100,7 @@ export function AsignacionDashboard() {
       });
       setOk(
         modo === "todas"
-          ? `Se asignaron ${result.updated} órdenes de ${titleCase(ciudad.ciudad)} a ${tecnico?.nombre ?? "el técnico"}.`
+          ? `Se asignaron ${result.updated} órdenes pendientes de ${titleCase(ciudad.ciudad)} a ${tecnico?.nombre ?? "el técnico"}.`
           : `Se asignaron ${result.updated} órdenes libres de ${titleCase(ciudad.ciudad)}.`,
       );
       await load(tecnicoId, query);
@@ -137,11 +137,11 @@ export function AsignacionDashboard() {
     if (!tecnico) return;
     const cantidad = modo === "libres" ? ciudad.libres : ciudad.total;
     confirmDialog({
-      header: modo === "todas" ? "Asignar toda la ciudad" : "Asignar órdenes libres",
+      header: modo === "todas" ? "Asignar pendientes de la ciudad" : "Asignar órdenes libres",
       message:
         modo === "todas"
-          ? `¿Asignar las ${cantidad} órdenes de ${titleCase(ciudad.ciudad)} a ${tecnico.nombre}? Si otra persona ya las tenía, se las quitas.`
-          : `¿Asignar ${cantidad} órdenes sin técnico de ${titleCase(ciudad.ciudad)} a ${tecnico.nombre}?`,
+          ? `¿Asignar las ${cantidad} órdenes pendientes de ${titleCase(ciudad.ciudad)} a ${tecnico.nombre}? Las ya recuperadas no se mueven.`
+          : `¿Asignar ${cantidad} órdenes pendientes sin técnico de ${titleCase(ciudad.ciudad)} a ${tecnico.nombre}?`,
       icon: "pi pi-map-marker",
       acceptLabel: "Asignar",
       rejectLabel: "Cancelar",
@@ -155,7 +155,7 @@ export function AsignacionDashboard() {
     if (!tecnico) return;
     confirmDialog({
       header: "Quitar ciudad",
-      message: `¿Quitar las ${ciudad.asignadas} órdenes de ${titleCase(ciudad.ciudad)} a ${tecnico.nombre}? Quedarán sin técnico.`,
+      message: `¿Quitar las ${ciudad.asignadas} órdenes pendientes de ${titleCase(ciudad.ciudad)} a ${tecnico.nombre}? Las que él ya recuperó se quedan en su lista.`,
       icon: "pi pi-times",
       acceptLabel: "Liberar",
       rejectLabel: "Cancelar",
@@ -206,13 +206,13 @@ export function AsignacionDashboard() {
               <strong>{tecnico.nombre}</strong> tiene{" "}
               <strong>{resumen?.totalAsignadas ?? 0}</strong> órdenes asignadas
               {tecnico.zona ? ` · zona ${titleCase(tecnico.zona)}` : ""}.
-              Asigna una ciudad para pasarle todas las órdenes de ese lugar.
+              Asigna una ciudad para pasarle las órdenes pendientes de ese lugar.
+              Las que ya están recuperadas no se mueven y solo las ve quien las recuperó.
             </p>
           ) : (
             <p className="m-0 text-[var(--text-color-secondary)]">
-              Elige un técnico para asignarle las órdenes de una ciudad. Las
-              libres no tienen técnico; “Asignar todas” también toma las que
-              otro técnico ya tenía.
+              Elige un técnico para asignarle las órdenes pendientes de una ciudad.
+              Las recuperadas no se reasignan.
             </p>
           )}
         </div>
@@ -294,7 +294,7 @@ export function AsignacionDashboard() {
                   />
                   <Button
                     type="button"
-                    label="Asignar todas"
+                    label="Asignar pendientes"
                     size="small"
                     outlined
                     disabled={!tecnicoId || row.total === 0}

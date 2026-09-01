@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { esOrdenRecuperada } from "@/lib/estado-orden";
 import { notFound } from "@/lib/errors";
 import type { ListQuery, OrdenCreateInput, OrdenUpdateInput } from "@/lib/validators";
 
@@ -13,7 +14,7 @@ function contains(value: string) {
   return { contains: value, mode: "insensitive" as const };
 }
 
-const recuperadaFiltro = {
+export const recuperadaFiltro = {
   OR: [
     { comentario: contains("Recuperó equipo: sí") },
     { comentario: contains("Recuperó equipo: si") },
@@ -47,6 +48,7 @@ function buildWhere(query: ListQuery) {
     ...(query.estado === "por_anular" ? [{ estadoAnulacion: "por_anular" }] : []),
     ...(query.estado === "anulada" ? [{ estadoAnulacion: "anulada" }] : []),
     ...(query.tecnicoId ? [{ tecnicoId: query.tecnicoId }] : []),
+    ...(query.recuperadoPorId ? [{ recuperadoPorId: query.recuperadoPorId }] : []),
     ...(query.asignacion === "sin_asignar" ? [{ tecnicoId: null }] : []),
     ...(query.asignacion === "asignada" ? [{ tecnicoId: { not: null } }] : []),
     ...(query.q
@@ -133,11 +135,26 @@ export async function createOrden(input: OrdenCreateInput) {
   });
 }
 
-export async function updateOrden(idOrNumero: string, input: OrdenUpdateInput) {
+export async function updateOrden(
+  idOrNumero: string,
+  input: OrdenUpdateInput,
+  actorId?: string | null,
+) {
   const current = await findOrden(idOrNumero);
+  const data: OrdenUpdateInput & { recuperadoPorId?: string | null } = { ...input };
+
+  if (input.comentario !== undefined) {
+    const seraRecuperada = esOrdenRecuperada(input.comentario);
+    if (!seraRecuperada) {
+      data.recuperadoPorId = null;
+    } else if (actorId && (!esOrdenRecuperada(current.comentario) || !current.recuperadoPorId)) {
+      data.recuperadoPorId = actorId;
+    }
+  }
+
   return prisma.orden.update({
     where: { id: current.id },
-    data: input,
+    data,
     include: { tecnico: { select: tecnicoSelect } },
   });
 }

@@ -14,7 +14,9 @@ async function ordenParaTecnico(request: NextRequest, id: string) {
   const auth = await assertAuth(request);
   const orden = await findOrden(id);
   if (auth.kind === "jwt" && auth.user.rol === ROL_TECNICO) {
-    if (orden.tecnicoId !== auth.user.sub) {
+    const esSuya =
+      orden.tecnicoId === auth.user.sub || orden.recuperadoPorId === auth.user.sub;
+    if (!esSuya) {
       throw forbidden("Esta orden no está asignada a tu cuenta");
     }
   }
@@ -49,9 +51,9 @@ export const PATCH = apiHandler(async (request: NextRequest, params) => {
     if (permitido.comentario === undefined && permitido.estadoAnulacion === undefined) {
       throw forbidden("Solo puedes actualizar el comentario o el estado de anulación");
     }
-    return json(await updateOrden(id, permitido));
+    return json(await updateOrden(id, permitido, auth.kind === "jwt" ? auth.user.sub : null));
   }
-  const orden = await updateOrden(id, input);
+  const orden = await updateOrden(id, input, auth.kind === "jwt" ? auth.user.sub : null);
   return json(orden);
 });
 

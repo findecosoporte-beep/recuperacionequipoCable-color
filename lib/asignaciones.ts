@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ApiError, badRequest } from "@/lib/errors";
+import { recuperadaFiltro } from "@/lib/ordenes";
 import { findTecnico } from "@/lib/tecnicos";
 import type {
   AsignacionQuery,
@@ -11,13 +12,25 @@ function ciudadEquals(ciudad: string) {
   return { equals: ciudad, mode: "insensitive" as const };
 }
 
+function pendientesAsignacion() {
+  return {
+    AND: [
+      { NOT: recuperadaFiltro },
+      { NOT: { estadoAnulacion: "anulada" } },
+    ],
+  };
+}
+
 export async function resumenAsignacion(query: AsignacionQuery) {
   const groups = await prisma.orden.groupBy({
     by: ["ciudad", "tecnicoId"],
     _count: { _all: true },
-    where: query.q
-      ? { ciudad: { contains: query.q, mode: "insensitive" } }
-      : undefined,
+    where: {
+      AND: [
+        pendientesAsignacion(),
+        ...(query.q ? [{ ciudad: { contains: query.q, mode: "insensitive" as const } }] : []),
+      ],
+    },
   });
 
   const ciudades = new Map<
@@ -78,7 +91,9 @@ export async function resumenAsignacion(query: AsignacionQuery) {
   }
 
   const totalAsignadas = query.tecnicoId
-    ? await prisma.orden.count({ where: { tecnicoId: query.tecnicoId } })
+    ? await prisma.orden.count({
+        where: { AND: [{ tecnicoId: query.tecnicoId }, pendientesAsignacion()] },
+      })
     : 0;
 
   return {
@@ -98,8 +113,8 @@ export async function asignarCiudad(input: AsignarCiudadInput) {
   const result = await prisma.orden.updateMany({
     where:
       input.modo === "libres"
-        ? { AND: [whereCiudad, { tecnicoId: null }] }
-        : whereCiudad,
+        ? { AND: [whereCiudad, pendientesAsignacion(), { tecnicoId: null }] }
+        : { AND: [whereCiudad, pendientesAsignacion()] },
     data: { tecnicoId: tecnico.id },
   });
 
@@ -115,8 +130,11 @@ export async function liberarCiudad(input: LiberarCiudadInput) {
   const tecnico = await findTecnico(input.tecnicoId);
   const result = await prisma.orden.updateMany({
     where: {
-      tecnicoId: tecnico.id,
-      ciudad: ciudadEquals(input.ciudad),
+      AND: [
+        { tecnicoId: tecnico.id },
+        { ciudad: ciudadEquals(input.ciudad) },
+        pendientesAsignacion(),
+      ],
     },
     data: { tecnicoId: null },
   });
