@@ -7,15 +7,6 @@ export type EstadoOrden =
   | "anulada"
   | "sin_registro";
 
-const RECUPERADA_MARCADORES = [
-  "recuperó equipo: sí",
-  "recupero equipo: sí",
-  "recuperó equipo: si",
-  "recupero equipo: si",
-  "equipos recuperados:",
-  "se recibe equipo",
-];
-
 export function comentarioNormalizado(comentario: string | null | undefined): string {
   return (comentario ?? "")
     .normalize("NFD")
@@ -24,14 +15,19 @@ export function comentarioNormalizado(comentario: string | null | undefined): st
 }
 
 export function esOrdenRecuperada(comentario: string | null | undefined): boolean {
-  const text = comentarioNormalizado(comentario);
-  return RECUPERADA_MARCADORES.some((marker) => text.includes(comentarioNormalizado(marker)));
+  const raw = comentario ?? "";
+  if (raw.includes("---ACUSE---")) return true;
+  // Solo la marca con acento que escribe la app. "RECUPERO EQUIPO: SI" es el trabajo pendiente.
+  if (/recuperó equipo:\s*sí/i.test(raw)) return true;
+  if (/recuperó equipo:\s*si/i.test(raw)) return true;
+  const text = comentarioNormalizado(raw);
+  return text.includes("equipos recuperados:") || text.includes("se recibe equipo");
 }
 
 export function esOrdenPorRecuperar(comentario: string | null | undefined): boolean {
   if (esOrdenRecuperada(comentario)) return false;
   const text = comentarioNormalizado(comentario);
-  return text.includes("recuperar");
+  return text.includes("recuperar") || text.includes("recupero");
 }
 
 export function estadoOrden(orden: {

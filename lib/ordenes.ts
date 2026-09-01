@@ -14,16 +14,32 @@ function contains(value: string) {
   return { contains: value, mode: "insensitive" as const };
 }
 
-export const recuperadaFiltro = {
+const recuperadaComentarioFiltro = {
   OR: [
+    { comentario: contains("---ACUSE---") },
     { comentario: contains("Recuperó equipo: sí") },
     { comentario: contains("Recuperó equipo: si") },
-    { comentario: contains("Recupero equipo: sí") },
-    { comentario: contains("Recupero equipo: si") },
     { comentario: contains("Equipos recuperados:") },
     { comentario: contains("Se recibe equipo") },
   ],
 };
+
+export const recuperadaFiltro = {
+  OR: [{ recuperadoPorId: { not: null } }, recuperadaComentarioFiltro],
+};
+
+export function noRecuperadaWhere() {
+  return {
+    recuperadoPorId: null,
+    OR: [{ comentario: null }, { NOT: recuperadaComentarioFiltro }],
+  };
+}
+
+export function noAnuladaWhere() {
+  return {
+    OR: [{ estadoAnulacion: null }, { estadoAnulacion: { not: "anulada" } }],
+  };
+}
 
 function buildWhere(query: ListQuery) {
   const filters = [
@@ -35,15 +51,7 @@ function buildWhere(query: ListQuery) {
       ? [{ AND: [recuperadaFiltro, { estadoAnulacion: null }] }]
       : []),
     ...(query.estado === "por_recuperar"
-      ? [
-          {
-            AND: [
-              { comentario: contains("Recuperar") },
-              { NOT: recuperadaFiltro },
-              { estadoAnulacion: null },
-            ],
-          },
-        ]
+      ? [{ AND: [noRecuperadaWhere(), { estadoAnulacion: null }] }]
       : []),
     ...(query.estado === "por_anular" ? [{ estadoAnulacion: "por_anular" }] : []),
     ...(query.estado === "anulada" ? [{ estadoAnulacion: "anulada" }] : []),

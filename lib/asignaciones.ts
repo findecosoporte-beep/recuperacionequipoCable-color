@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ApiError, badRequest } from "@/lib/errors";
-import { recuperadaFiltro } from "@/lib/ordenes";
+import { noAnuladaWhere, noRecuperadaWhere } from "@/lib/ordenes";
 import { findTecnico } from "@/lib/tecnicos";
 import type {
   AsignacionQuery,
@@ -14,10 +14,7 @@ function ciudadEquals(ciudad: string) {
 
 function pendientesAsignacion() {
   return {
-    AND: [
-      { NOT: recuperadaFiltro },
-      { NOT: { estadoAnulacion: "anulada" } },
-    ],
+    AND: [noRecuperadaWhere(), noAnuladaWhere()],
   };
 }
 
