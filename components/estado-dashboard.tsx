@@ -12,12 +12,15 @@ import { Tag } from "primereact/tag";
 import { useAuth } from "@/components/auth-provider";
 import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
+import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import {
   estadoOrden,
   estadoOrdenLabel,
   estadoOrdenSeverity,
   equiposRecuperadosDe,
+  withEquiposRecuperados,
+  withRecupero,
   type EstadoAnulacion,
   type EstadoOrden,
 } from "@/lib/estado-orden";
@@ -82,6 +85,7 @@ export function EstadoDashboard() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recuperoOrden, setRecuperoOrden] = useState<Orden | null>(null);
   const requestId = useRef(0);
   const filtroRef = useRef(filtro);
   filtroRef.current = filtro;
@@ -129,6 +133,42 @@ export function EstadoDashboard() {
     // Recarga al entrar o al cambiar de filtro. La búsqueda usa el botón Buscar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, router, filtro]);
+
+  async function marcarRecuperada(orden: Orden, equipos: string) {
+    setSavingId(orden.id);
+    setError(null);
+    try {
+      const comentario = withEquiposRecuperados(withRecupero(orden.comentario, "si"), equipos);
+      await apiRequest<Orden>(`/api/v1/ordenes/${orden.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ comentario, estadoAnulacion: null }),
+      });
+      setRecuperoOrden(null);
+      setFiltro("recuperada");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo marcar como recuperada");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function quitarRecuperada(orden: Orden) {
+    setSavingId(orden.id);
+    setError(null);
+    try {
+      await apiRequest<Orden>(`/api/v1/ordenes/${orden.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          comentario: withRecupero(orden.comentario, "no"),
+        }),
+      });
+      await load(meta.page, query, meta.limit, filtro);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo quitar la recuperación");
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   async function setAnulacion(orden: Orden, estadoAnulacion: EstadoAnulacion | null) {
     setSavingId(orden.id);
@@ -185,6 +225,15 @@ export function EstadoDashboard() {
   return (
     <AppShell title="Estado de recuperación" subtitle="Órdenes de campo">
       <ConfirmDialog />
+      <MarcarRecuperadaDialog
+        orden={recuperoOrden}
+        saving={Boolean(recuperoOrden && savingId === recuperoOrden.id)}
+        onClose={() => setRecuperoOrden(null)}
+        onConfirm={(equipos) => {
+          if (!recuperoOrden) return;
+          void marcarRecuperada(recuperoOrden, equipos);
+        }}
+      />
 
       <main className="mx-auto grid w-full flex-1 grid-cols-4 gap-4 px-4 py-6 sm:px-6">
         <form
@@ -286,7 +335,7 @@ export function EstadoDashboard() {
             />
             <Column
               header="Acciones"
-              style={{ width: "12%" }}
+              style={{ width: "16%" }}
               body={(row: Orden) => {
                 const busy = savingId === row.id;
                 if (filtro === "por_anular") {
@@ -348,24 +397,77 @@ export function EstadoDashboard() {
                     />
                   );
                 }
+                if (filtro === "recuperada") {
+                  return (
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        label="Quitar recuperada"
+                        size="small"
+                        text
+                        severity="secondary"
+                        loading={busy}
+                        onClick={() =>
+                          confirmDialog({
+                            message: `¿Quitar la orden ${formatOrdenNumero(row.orden)} de recuperadas?`,
+                            header: "Quitar recuperada",
+                            icon: "pi pi-exclamation-triangle",
+                            acceptLabel: "Quitar",
+                            rejectLabel: "Cancelar",
+                            accept: () => {
+                              void quitarRecuperada(row);
+                            },
+                          })
+                        }
+                      />
+                      <Button
+                        type="button"
+                        label="Mandar a anular"
+                        size="small"
+                        text
+                        severity="danger"
+                        loading={busy}
+                        onClick={() =>
+                          confirmarAnulacion(
+                            row,
+                            "por_anular",
+                            `¿Mandar a anular la orden ${formatOrdenNumero(row.orden)}?`,
+                            "Mandar a anular",
+                            "Mandar a anular",
+                          )
+                        }
+                      />
+                    </div>
+                  );
+                }
                 return (
-                  <Button
-                    type="button"
-                    label="Mandar a anular"
-                    size="small"
-                    text
-                    severity="danger"
-                    loading={busy}
-                    onClick={() =>
-                      confirmarAnulacion(
-                        row,
-                        "por_anular",
-                        `¿Mandar a anular la orden ${formatOrdenNumero(row.orden)}?`,
-                        "Mandar a anular",
-                        "Mandar a anular",
-                      )
-                    }
-                  />
+                  <div className="flex flex-wrap gap-1">
+                    <Button
+                      type="button"
+                      label="Marcar recuperada"
+                      size="small"
+                      text
+                      loading={busy}
+                      onClick={() => setRecuperoOrden(row)}
+                    />
+                    <Button
+                      type="button"
+                      label="Mandar a anular"
+                      size="small"
+                      text
+                      severity="danger"
+                      loading={busy}
+                      onClick={() =>
+                        confirmarAnulacion(
+                          row,
+                          "por_anular",
+                          `¿Mandar a anular la orden ${formatOrdenNumero(row.orden)}?`,
+                          "Mandar a anular",
+                          "Mandar a anular",
+                        )
+                      }
+                    />
+                  </div>
                 );
               }}
             />

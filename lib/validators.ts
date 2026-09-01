@@ -17,7 +17,7 @@ export const ordenCreateSchema = z.object({
     .string({ error: "telefono es obligatorio" })
     .trim()
     .min(8, "telefono debe tener al menos 8 caracteres")
-    .max(20, "telefono no puede superar 20 caracteres")
+    .max(80, "telefono no puede superar 80 caracteres")
     .regex(/^[+\d\s()-]+$/, "telefono tiene un formato inválido"),
   comentario: z
     .string()

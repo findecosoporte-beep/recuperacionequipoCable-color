@@ -177,7 +177,7 @@ export async function parseOrdenesExcel(
       ciudad: ciudad.slice(0, 100),
       colonia: colonia.slice(0, 100),
       direccion: direccion.slice(0, 255),
-      telefono: phone.slice(0, 20),
+      telefono: phone.slice(0, 80),
       comentario,
     });
   }

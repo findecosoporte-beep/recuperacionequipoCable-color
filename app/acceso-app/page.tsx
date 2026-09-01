@@ -38,8 +38,9 @@ export default function AccesoAppPage() {
         </p>
         <p className="mb-6 mt-2 text-sm text-[var(--text-color-secondary)]">
           Hola {user.nombre}. Esta cuenta es para la aplicación de técnicos, no
-          para el panel web. Entra desde el celular con el mismo email y
-          contraseña.
+          para el panel web. Entra desde el celular con la app Expo{" "}
+          <strong>Findeco Técnico</strong> (carpeta <code>app-tecnico</code>),
+          usando el mismo email y contraseña.
         </p>
         <Button
           type="button"

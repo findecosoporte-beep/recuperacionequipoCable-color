@@ -12,9 +12,11 @@ import { Tag } from "primereact/tag";
 import { useAuth } from "@/components/auth-provider";
 import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
+import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { OrdenFormModal } from "@/components/orden-form-modal";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import { downloadPlantillaExcel, parseOrdenesExcel } from "@/lib/excel-import";
+import { esOrdenRecuperada, withEquiposRecuperados, withRecupero } from "@/lib/estado-orden";
 import { parseNombreCliente } from "@/lib/nombre-cliente";
 import {
   formatOrdenNumero,
@@ -50,6 +52,8 @@ export function OrdenesDashboard() {
   const [formError, setFormError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [recuperoOrden, setRecuperoOrden] = useState<Orden | null>(null);
+  const [savingRecupero, setSavingRecupero] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(
@@ -139,6 +143,24 @@ export function OrdenesDashboard() {
     }
   }
 
+  async function marcarRecuperada(orden: Orden, equipos: string) {
+    setSavingRecupero(true);
+    setError(null);
+    try {
+      const comentario = withEquiposRecuperados(withRecupero(orden.comentario, "si"), equipos);
+      await apiRequest<Orden>(`/api/v1/ordenes/${orden.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ comentario, estadoAnulacion: null }),
+      });
+      setRecuperoOrden(null);
+      await load(meta.page, query);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo marcar como recuperada");
+    } finally {
+      setSavingRecupero(false);
+    }
+  }
+
   function removeOrden(orden: Orden) {
     confirmDialog({
       message: `¿Eliminar la orden ${formatOrdenNumero(orden.orden)}?`,
@@ -203,6 +225,15 @@ export function OrdenesDashboard() {
   return (
     <AppShell title="Panel de órdenes" subtitle="Órdenes de campo">
       <ConfirmDialog />
+      <MarcarRecuperadaDialog
+        orden={recuperoOrden}
+        saving={savingRecupero}
+        onClose={() => setRecuperoOrden(null)}
+        onConfirm={(equipos) => {
+          if (!recuperoOrden) return;
+          void marcarRecuperada(recuperoOrden, equipos);
+        }}
+      />
 
       <main className="mx-auto grid w-full flex-1 grid-cols-4 gap-4 px-4 py-6 sm:px-6">
         <form
@@ -325,6 +356,15 @@ export function OrdenesDashboard() {
               style={{ width: "10%" }}
               body={(row: Orden) => (
                 <div className="flex flex-wrap gap-1">
+                  {!esOrdenRecuperada(row.comentario) && row.estadoAnulacion !== "anulada" ? (
+                    <Button
+                      type="button"
+                      label="Recuperada"
+                      size="small"
+                      text
+                      onClick={() => setRecuperoOrden(row)}
+                    />
+                  ) : null}
                   <Button
                     type="button"
                     label="Editar"

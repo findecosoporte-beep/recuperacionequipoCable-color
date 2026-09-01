@@ -52,6 +52,32 @@ export function equiposRecuperadosDe(comentario: string | null | undefined): str
   return recibido?.[1]?.trim() ?? "";
 }
 
+export function withEquiposRecuperados(
+  comentario: string | null | undefined,
+  equipos: string,
+): string {
+  const limpio = (comentario ?? "")
+    .replace(/Equipos recuperados:.*$/gim, "")
+    .replace(/se recibe equipo.*$/gim, "")
+    .trim();
+  if (!equipos.trim()) return limpio;
+  return `${limpio}\nEquipos recuperados: ${equipos.trim()}`.trim();
+}
+
+export function withRecupero(
+  comentario: string | null | undefined,
+  value: "si" | "no",
+): string {
+  const limpio = (comentario ?? "")
+    .replace(/Recuperó equipo:.*$/gim, "")
+    .replace(/Recupero equipo:.*$/gim, "")
+    .replace(/Equipos recuperados:.*$/gim, "")
+    .replace(/se recibe equipo.*$/gim, "")
+    .trim();
+  const linea = value === "si" ? "Recuperó equipo: sí" : "Recuperó equipo: no";
+  return [limpio, linea].filter(Boolean).join("\n");
+}
+
 export function estadoOrdenLabel(estado: EstadoOrden): string {
   switch (estado) {
     case "recuperada":

@@ -31,13 +31,43 @@ export function formatOrdenNumero(orden: string): string {
 
 export function formatTelefono(telefono: string): string {
   const digits = telefono.replace(/\D/g, "");
+  if (!digits) return telefono.trim() || "—";
+
+  const numeros = splitPhones(digits);
+  return numeros.map(prettyPhone).join("  /  ");
+}
+
+function splitPhones(digits: string): string[] {
+  if (digits.length <= 12) return [digits];
+  for (const code of ["504", "503", "502", "505", "506", "507"]) {
+    if (!digits.startsWith(code)) continue;
+    const rest = digits.slice(code.length);
+    const index = rest.indexOf(code);
+    if (index >= 6) {
+      return [
+        digits.slice(0, code.length + index),
+        ...splitPhones(rest.slice(index)),
+      ];
+    }
+  }
+  if (digits.length === 16) return [digits.slice(0, 8), digits.slice(8)];
+  if (digits.startsWith("504") && digits.length >= 19) {
+    return [digits.slice(0, 11), digits.slice(11)].filter((item) => item.length >= 8);
+  }
+  return [digits];
+}
+
+function prettyPhone(digits: string): string {
+  if (digits.startsWith("504") && digits.length >= 11) {
+    return `+504 ${digits.slice(3, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 8) {
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  }
   if (digits.length === 10) {
     return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
   }
-  if (digits.length === 8) {
-    return `${digits.slice(0, 4)} ${digits.slice(4)}`;
-  }
-  return telefono.trim() || "—";
+  return digits;
 }
 
 export function visiblePages(current: number, total: number): Array<number | "…"> {
