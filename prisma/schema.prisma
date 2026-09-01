@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Orden {
+  id         String   @id @default(cuid())
+  orden      String   @unique
+  cliente    String
+  ciudad     String
+  colonia    String
+  direccion  String
+  telefono   String
+  comentario String?  @db.Text
+  estadoAnulacion String?  @map("estado_anulacion")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([cliente])
+  @@index([ciudad])
+  @@index([colonia])
+  @@index([telefono])
+  @@index([createdAt])
+  @@index([estadoAnulacion])
+  @@map("ordenes")
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  nombre       String
+  passwordHash String   @map("password_hash")
+  rol          String   @default("operador")
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@map("usuarios")
+}

@@ -1,0 +1,214 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  PrismaClientInitializationError,
+  PrismaClientKnownRequestError,
+} from "@prisma/client/runtime/library";
+import { ZodError } from "zod";
+import { getAllowedOrigins } from "@/lib/env";
+import { ApiError, badRequest, internalError } from "@/lib/errors";
+import { assertAuth } from "@/lib/auth";
+import { enforceRateLimit } from "@/lib/rate-limit";
+
+type RouteParams = Record<string, string>;
+
+type Handler = (
+  request: NextRequest,
+  params: RouteParams,
+) => Promise<NextResponse> | NextResponse;
+
+interface HandlerOptions {
+  auth?: boolean;
+  rateLimit?: boolean;
+}
+
+function resolveAllowedOrigin(origin: string | null): string {
+  const allowed = getAllowedOrigins();
+  if (allowed.includes("*")) {
+    return "*";
+  }
+  if (origin && allowed.includes(origin)) {
+    return origin;
+  }
+  return allowed[0] ?? "null";
+}
+
+export function corsHeaders(origin: string | null): HeadersInit {
+  return {
+    "Access-Control-Allow-Origin": resolveAllowedOrigin(origin),
+    "Access-Control-Allow-Methods": "GET,POST,PATCH,PUT,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-API-Key",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  };
+}
+
+export function securityHeaders(): HeadersInit {
+  return {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "no-store",
+  };
+}
+
+export async function readJson(request: NextRequest): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    throw badRequest("El cuerpo de la solicitud no es un JSON válido");
+  }
+}
+
+export function json<T>(
+  data: T,
+  status = 200,
+  extra?: Record<string, unknown>,
+): NextResponse {
+  return NextResponse.json(
+    {
+      success: true,
+      data,
+      ...extra,
+    },
+    { status },
+  );
+}
+
+export function errorResponse(error: ApiError): NextResponse {
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+        details: error.details ?? null,
+      },
+    },
+    { status: error.status },
+  );
+}
+
+function fromUnknown(error: unknown): ApiError {
+  if (error instanceof ApiError) {
+    return error;
+  }
+
+  if (error instanceof ZodError) {
+    return new ApiError(400, "VALIDATION_ERROR", "Datos inválidos", error.issues);
+  }
+
+  if (error instanceof PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
+      return new ApiError(
+        409,
+        "CONFLICT",
+        "Ya existe una orden con ese número",
+        { fields: error.meta?.target },
+      );
+    }
+    if (error.code === "P2025") {
+      return new ApiError(404, "NOT_FOUND", "Orden no encontrada");
+    }
+  }
+
+  if (error instanceof SyntaxError) {
+    return new ApiError(400, "BAD_REQUEST", "El cuerpo no es un JSON válido");
+  }
+
+  if (isDatabaseUnavailable(error)) {
+    return new ApiError(
+      503,
+      "SERVICE_UNAVAILABLE",
+      "Base de datos no disponible",
+    );
+  }
+
+  console.error("[api]", error);
+  return internalError();
+}
+
+function isDatabaseUnavailable(error: unknown): boolean {
+  if (error instanceof PrismaClientInitializationError) {
+    return true;
+  }
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  const maybe = error as { name?: string; message?: string; constructor?: { name?: string } };
+  return (
+    maybe.name === "PrismaClientInitializationError" ||
+    maybe.constructor?.name === "PrismaClientInitializationError" ||
+    (typeof maybe.message === "string" &&
+      maybe.message.includes("Can't reach database server"))
+  );
+}
+
+function applyCommonHeaders(response: NextResponse, origin: string | null): NextResponse {
+  const headers = {
+    ...corsHeaders(origin),
+    ...securityHeaders(),
+  };
+  for (const [key, value] of Object.entries(headers)) {
+    response.headers.set(key, value);
+  }
+  return response;
+}
+
+export function apiHandler(handler: Handler, options: HandlerOptions = {}) {
+  const { auth = true, rateLimit = true } = options;
+
+  return async (
+    request: NextRequest,
+    context?: { params?: Promise<RouteParams> },
+  ): Promise<NextResponse> => {
+    const origin = request.headers.get("origin");
+    const started = Date.now();
+
+    if (request.method === "OPTIONS") {
+      return applyCommonHeaders(new NextResponse(null, { status: 204 }), origin);
+    }
+
+    try {
+      if (rateLimit) {
+        enforceRateLimit(request);
+      }
+      if (auth) {
+        await assertAuth(request);
+      }
+
+      const params = context?.params ? await context.params : {};
+      const response = await handler(request, params);
+      applyCommonHeaders(response, origin);
+
+      console.info(
+        JSON.stringify({
+          method: request.method,
+          path: request.nextUrl.pathname,
+          status: response.status,
+          ms: Date.now() - started,
+        }),
+      );
+
+      return response;
+    } catch (error) {
+      const apiError = fromUnknown(error);
+      const response = applyCommonHeaders(errorResponse(apiError), origin);
+      console.info(
+        JSON.stringify({
+          method: request.method,
+          path: request.nextUrl.pathname,
+          status: apiError.status,
+          code: apiError.code,
+          ms: Date.now() - started,
+        }),
+      );
+      return response;
+    }
+  };
+}
+
+export const handleOptions = apiHandler(
+  async () => new NextResponse(null, { status: 204 }),
+  { auth: false, rateLimit: false },
+);
