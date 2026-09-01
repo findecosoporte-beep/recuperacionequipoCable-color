@@ -2,6 +2,13 @@ import { prisma } from "@/lib/db";
 import { notFound } from "@/lib/errors";
 import type { ListQuery, OrdenCreateInput, OrdenUpdateInput } from "@/lib/validators";
 
+const tecnicoSelect = {
+  id: true,
+  nombre: true,
+  email: true,
+  activo: true,
+} as const;
+
 function contains(value: string) {
   return { contains: value, mode: "insensitive" as const };
 }
@@ -39,6 +46,9 @@ function buildWhere(query: ListQuery) {
       : []),
     ...(query.estado === "por_anular" ? [{ estadoAnulacion: "por_anular" }] : []),
     ...(query.estado === "anulada" ? [{ estadoAnulacion: "anulada" }] : []),
+    ...(query.tecnicoId ? [{ tecnicoId: query.tecnicoId }] : []),
+    ...(query.asignacion === "sin_asignar" ? [{ tecnicoId: null }] : []),
+    ...(query.asignacion === "asignada" ? [{ tecnicoId: { not: null } }] : []),
     ...(query.q
       ? [
           {
@@ -85,6 +95,7 @@ export async function listOrdenes(query: ListQuery) {
       orderBy,
       skip,
       take: query.limit,
+      include: { tecnico: { select: tecnicoSelect } },
     }),
     prisma.orden.count({ where }),
   ]);
@@ -105,6 +116,7 @@ export async function findOrden(idOrNumero: string) {
     where: {
       OR: [{ id: idOrNumero }, { orden: idOrNumero }],
     },
+    include: { tecnico: { select: tecnicoSelect } },
   });
 
   if (!orden) {
@@ -115,7 +127,10 @@ export async function findOrden(idOrNumero: string) {
 }
 
 export async function createOrden(input: OrdenCreateInput) {
-  return prisma.orden.create({ data: input });
+  return prisma.orden.create({
+    data: input,
+    include: { tecnico: { select: tecnicoSelect } },
+  });
 }
 
 export async function updateOrden(idOrNumero: string, input: OrdenUpdateInput) {
@@ -123,6 +138,7 @@ export async function updateOrden(idOrNumero: string, input: OrdenUpdateInput) {
   return prisma.orden.update({
     where: { id: current.id },
     data: input,
+    include: { tecnico: { select: tecnicoSelect } },
   });
 }
 
@@ -166,6 +182,7 @@ export async function createOrdenesBulk(inputs: OrdenCreateInput[]) {
           orden: { in: nuevos.map((item) => item.orden) },
         },
         orderBy: { createdAt: "desc" },
+        include: { tecnico: { select: tecnicoSelect } },
       })
     : [];
 

@@ -100,12 +100,18 @@ function fromUnknown(error: unknown): ApiError {
 
   if (error instanceof PrismaClientKnownRequestError) {
     if (error.code === "P2002") {
-      return new ApiError(
-        409,
-        "CONFLICT",
-        "Ya existe una orden con ese número",
-        { fields: error.meta?.target },
-      );
+      const fields = error.meta?.target;
+      const fieldList = Array.isArray(fields)
+        ? fields.join(",")
+        : String(fields ?? "");
+      const message = fieldList.includes("email")
+        ? "Ya existe un usuario con ese email"
+        : fieldList.includes("orden")
+          ? "Ya existe una orden con ese número"
+          : "Ya existe un registro con ese valor";
+      return new ApiError(409, "CONFLICT", message, {
+        fields: error.meta?.target,
+      });
     }
     if (error.code === "P2025") {
       return new ApiError(404, "NOT_FOUND", "Orden no encontrada");

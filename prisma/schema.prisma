@@ -8,17 +8,19 @@ datasource db {
 }
 
 model Orden {
-  id         String   @id @default(cuid())
-  orden      String   @unique
-  cliente    String
-  ciudad     String
-  colonia    String
-  direccion  String
-  telefono   String
-  comentario String?  @db.Text
-  estadoAnulacion String?  @map("estado_anulacion")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(cuid())
+  orden           String    @unique
+  cliente         String
+  ciudad          String
+  colonia         String
+  direccion       String
+  telefono        String
+  comentario      String?   @db.Text
+  estadoAnulacion String?   @map("estado_anulacion")
+  tecnicoId       String?   @map("tecnico_id")
+  tecnico         Usuario?  @relation(fields: [tecnicoId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@index([cliente])
   @@index([ciudad])
@@ -26,6 +28,7 @@ model Orden {
   @@index([telefono])
   @@index([createdAt])
   @@index([estadoAnulacion])
+  @@index([tecnicoId])
   @@map("ordenes")
 }
 
@@ -36,9 +39,13 @@ model Usuario {
   passwordHash String   @map("password_hash")
   rol          String   @default("operador")
   activo       Boolean  @default(true)
+  telefono     String?
+  zona         String?
+  ordenes      Orden[]
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@index([email])
+  @@index([rol])
   @@map("usuarios")
 }

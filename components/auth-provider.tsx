@@ -15,7 +15,7 @@ interface AuthContextValue {
   user: Usuario | null;
   token: string | null;
   ready: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<Usuario>;
   logout: () => void;
 }
 
@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     storeToken(data.token);
     setToken(data.token);
     setUser(data.user);
+    return data.user;
   }, []);
 
   const logout = useCallback(() => {

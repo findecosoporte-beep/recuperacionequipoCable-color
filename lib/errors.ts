@@ -25,6 +25,10 @@ export function unauthorized(message = "API key inválida o ausente"): ApiError 
   return new ApiError(401, "UNAUTHORIZED", message);
 }
 
+export function forbidden(message = "No tienes permiso para esta acción"): ApiError {
+  return new ApiError(403, "FORBIDDEN", message);
+}
+
 export function notFound(message = "Recurso no encontrado"): ApiError {
   return new ApiError(404, "NOT_FOUND", message);
 }

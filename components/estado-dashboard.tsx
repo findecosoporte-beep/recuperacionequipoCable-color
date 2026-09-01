@@ -10,6 +10,7 @@ import { InputText } from "primereact/inputtext";
 import { Message } from "primereact/message";
 import { Tag } from "primereact/tag";
 import { useAuth } from "@/components/auth-provider";
+import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import {
@@ -120,6 +121,10 @@ export function EstadoDashboard() {
       router.replace("/login");
       return;
     }
+    if (!esRolPanel(user.rol)) {
+      router.replace("/acceso-app");
+      return;
+    }
     void load(1, query, meta.limit, filtro);
     // Recarga al entrar o al cambiar de filtro. La búsqueda usa el botón Buscar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -169,7 +174,7 @@ export function EstadoDashboard() {
     });
   }
 
-  if (!ready || !user) {
+  if (!ready || !user || !esRolPanel(user.rol)) {
     return (
       <div className="flex flex-1 items-center justify-center text-[var(--text-color-secondary)]">
         Cargando...

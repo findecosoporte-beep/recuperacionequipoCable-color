@@ -2,7 +2,8 @@ import { timingSafeEqual } from "crypto";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { getApiKey, isProduction } from "@/lib/env";
-import { unauthorized } from "@/lib/errors";
+import { forbidden, unauthorized } from "@/lib/errors";
+import { esRolPanel } from "@/lib/roles";
 import { looksLikeJwt, verifyAuthToken, type AuthTokenPayload } from "@/lib/jwt";
 
 export type AuthContext =
@@ -31,12 +32,18 @@ export function publicUser(user: {
   email: string;
   nombre: string;
   rol: string;
+  telefono?: string | null;
+  zona?: string | null;
+  activo?: boolean;
 }) {
   return {
     id: user.id,
     email: user.email,
     nombre: user.nombre,
     rol: user.rol,
+    telefono: user.telefono ?? null,
+    zona: user.zona ?? null,
+    activo: user.activo ?? true,
   };
 }
 
@@ -63,6 +70,17 @@ export async function assertAuth(request: NextRequest): Promise<AuthContext> {
   throw unauthorized("Credenciales inválidas o sesión expirada");
 }
 
+export async function requirePanelAccess(request: NextRequest) {
+  const auth = await assertAuth(request);
+  if (auth.kind === "api_key") {
+    return auth;
+  }
+  if (!esRolPanel(auth.user.rol)) {
+    throw forbidden("Esta cuenta es de técnico recuperador. Usa la app de campo.");
+  }
+  return auth;
+}
+
 export async function requireSessionUser(request: NextRequest) {
   const auth = await assertAuth(request);
   if (auth.kind !== "jwt" || !auth.user.sub) {
@@ -71,7 +89,15 @@ export async function requireSessionUser(request: NextRequest) {
 
   const user = await prisma.usuario.findUnique({
     where: { id: auth.user.sub },
-    select: { id: true, email: true, nombre: true, rol: true, activo: true },
+    select: {
+      id: true,
+      email: true,
+      nombre: true,
+      rol: true,
+      activo: true,
+      telefono: true,
+      zona: true,
+    },
   });
 
   if (!user || !user.activo) {

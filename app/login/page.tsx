@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "primereact/card";
 import { LoginForm } from "@/components/login-form";
 import { useAuth } from "@/components/auth-provider";
+import { esRolPanel } from "@/lib/roles";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (ready && user) {
-      router.replace("/");
+      router.replace(esRolPanel(user.rol) ? "/" : "/acceso-app");
     }
   }, [ready, user, router]);
 

@@ -8,6 +8,7 @@ import { InputText } from "primereact/inputtext";
 import { Message } from "primereact/message";
 import { Password } from "primereact/password";
 import { useAuth } from "@/components/auth-provider";
+import { esRolPanel } from "@/lib/roles";
 
 export function LoginForm() {
   const router = useRouter();
@@ -22,8 +23,8 @@ export function LoginForm() {
     setError(null);
     setLoading(true);
     try {
-      await login(email, password);
-      router.replace("/");
+      const current = await login(email, password);
+      router.replace(esRolPanel(current.rol) ? "/" : "/acceso-app");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesión");
     } finally {

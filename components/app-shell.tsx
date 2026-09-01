@@ -36,6 +36,22 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
           router.push("/estado");
         },
       },
+      {
+        label: "Técnicos",
+        icon: "pi pi-users",
+        className: pathname === "/tecnicos" ? "ordenes-menu-active" : undefined,
+        command: () => {
+          router.push("/tecnicos");
+        },
+      },
+      {
+        label: "Asignación",
+        icon: "pi pi-map-marker",
+        className: pathname === "/asignacion" ? "ordenes-menu-active" : undefined,
+        command: () => {
+          router.push("/asignacion");
+        },
+      },
     ],
     [pathname, router],
   );

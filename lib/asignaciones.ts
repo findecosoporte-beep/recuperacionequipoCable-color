@@ -1,0 +1,129 @@
+import { prisma } from "@/lib/db";
+import { ApiError, badRequest } from "@/lib/errors";
+import { findTecnico } from "@/lib/tecnicos";
+import type {
+  AsignacionQuery,
+  AsignarCiudadInput,
+  LiberarCiudadInput,
+} from "@/lib/validators-asignaciones";
+
+function ciudadEquals(ciudad: string) {
+  return { equals: ciudad, mode: "insensitive" as const };
+}
+
+export async function resumenAsignacion(query: AsignacionQuery) {
+  const groups = await prisma.orden.groupBy({
+    by: ["ciudad", "tecnicoId"],
+    _count: { _all: true },
+    where: query.q
+      ? { ciudad: { contains: query.q, mode: "insensitive" } }
+      : undefined,
+  });
+
+  const ciudades = new Map<
+    string,
+    {
+      ciudad: string;
+      total: number;
+      libres: number;
+      asignadas: number;
+      otras: number;
+    }
+  >();
+
+  for (const group of groups) {
+    const current = ciudades.get(group.ciudad) ?? {
+      ciudad: group.ciudad,
+      total: 0,
+      libres: 0,
+      asignadas: 0,
+      otras: 0,
+    };
+    current.total += group._count._all;
+    if (!group.tecnicoId) {
+      current.libres += group._count._all;
+    } else if (query.tecnicoId && group.tecnicoId === query.tecnicoId) {
+      current.asignadas += group._count._all;
+    } else {
+      current.otras += group._count._all;
+    }
+    ciudades.set(group.ciudad, current);
+  }
+
+  const items = [...ciudades.values()].sort((a, b) =>
+    a.ciudad.localeCompare(b.ciudad, "es"),
+  );
+
+  let tecnico: {
+    id: string;
+    nombre: string;
+    zona: string | null;
+    activo: boolean;
+  } | null = null;
+
+  if (query.tecnicoId) {
+    try {
+      const user = await findTecnico(query.tecnicoId);
+      tecnico = {
+        id: user.id,
+        nombre: user.nombre,
+        zona: user.zona,
+        activo: user.activo,
+      };
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+  }
+
+  const totalAsignadas = query.tecnicoId
+    ? await prisma.orden.count({ where: { tecnicoId: query.tecnicoId } })
+    : 0;
+
+  return {
+    tecnico,
+    totalAsignadas,
+    ciudades: items,
+  };
+}
+
+export async function asignarCiudad(input: AsignarCiudadInput) {
+  const tecnico = await findTecnico(input.tecnicoId);
+  if (!tecnico.activo) {
+    throw badRequest("El técnico está inactivo");
+  }
+
+  const whereCiudad = { ciudad: ciudadEquals(input.ciudad) };
+  const result = await prisma.orden.updateMany({
+    where:
+      input.modo === "libres"
+        ? { AND: [whereCiudad, { tecnicoId: null }] }
+        : whereCiudad,
+    data: { tecnicoId: tecnico.id },
+  });
+
+  return {
+    updated: result.count,
+    ciudad: input.ciudad,
+    tecnicoId: tecnico.id,
+    modo: input.modo,
+  };
+}
+
+export async function liberarCiudad(input: LiberarCiudadInput) {
+  const tecnico = await findTecnico(input.tecnicoId);
+  const result = await prisma.orden.updateMany({
+    where: {
+      tecnicoId: tecnico.id,
+      ciudad: ciudadEquals(input.ciudad),
+    },
+    data: { tecnicoId: null },
+  });
+
+  return {
+    updated: result.count,
+    ciudad: input.ciudad,
+    tecnicoId: tecnico.id,
+  };
+}

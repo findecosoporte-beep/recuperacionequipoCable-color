@@ -53,6 +53,49 @@ const endpoints = [
     path: "/api/v1/ordenes/bulk",
     description: "Importa hasta 500 órdenes (ideal para Excel). Omite duplicados.",
   },
+  {
+    method: "GET",
+    path: "/api/v1/tecnicos",
+    description:
+      "Lista técnicos recuperadores. Filtros: q, zona, activo, page, limit.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/tecnicos",
+    description: "Crea un técnico recuperador (email, contraseña, zona, teléfono).",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/tecnicos/:id",
+    description: "Consulta un técnico por id.",
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/tecnicos/:id",
+    description: "Actualiza datos, contraseña o activa/desactiva la cuenta.",
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/tecnicos/:id",
+    description: "Elimina un técnico recuperador.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/asignaciones",
+    description:
+      "Resumen de órdenes por ciudad. Query: tecnicoId, q (ciudad).",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/asignaciones",
+    description:
+      "Asigna órdenes de una ciudad a un técnico. modo: libres | todas.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/asignaciones/liberar",
+    description: "Quita las órdenes de una ciudad al técnico indicado.",
+  },
 ];
 
 const fields = [

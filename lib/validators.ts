@@ -27,6 +27,13 @@ export const ordenCreateSchema = z.object({
     .nullable()
     .transform((value) => (value ? value : null)),
   estadoAnulacion: z.enum(["por_anular", "anulada"]).nullable().optional(),
+  tecnicoId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .nullable()
+    .optional(),
 });
 
 export const ordenUpdateSchema = ordenCreateSchema.partial().refine(
@@ -64,6 +71,8 @@ export const listQuerySchema = z.object({
   cliente: emptyToUndefined(150),
   orden: emptyToUndefined(50),
   estado: z.enum(["recuperada", "por_recuperar", "por_anular", "anulada"]).optional(),
+  tecnicoId: emptyToUndefined(40),
+  asignacion: z.enum(["sin_asignar", "asignada"]).optional(),
   sort: z.enum(["createdAt", "orden", "cliente", "ciudad"]).default("createdAt"),
   order: z.enum(["asc", "desc"]).default("desc"),
 });

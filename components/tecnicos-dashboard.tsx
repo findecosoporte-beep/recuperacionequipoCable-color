@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "primereact/button";
 import { Column } from "primereact/column";
@@ -10,19 +10,12 @@ import { InputText } from "primereact/inputtext";
 import { Message } from "primereact/message";
 import { Tag } from "primereact/tag";
 import { useAuth } from "@/components/auth-provider";
-import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
-import { OrdenFormModal } from "@/components/orden-form-modal";
+import { TecnicoFormModal } from "@/components/tecnico-form-modal";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
-import { downloadPlantillaExcel, parseOrdenesExcel } from "@/lib/excel-import";
-import { parseNombreCliente } from "@/lib/nombre-cliente";
-import {
-  formatOrdenNumero,
-  formatTelefono,
-  titleCase,
-  visiblePages,
-} from "@/lib/format-orden";
-import type { BulkImportResult, Orden, OrdenPayload } from "@/lib/types";
+import { formatTelefono, titleCase, visiblePages } from "@/lib/format-orden";
+import { esRolPanel, etiquetaRol } from "@/lib/roles";
+import type { Tecnico, TecnicoPayload } from "@/lib/types";
 
 interface ListMeta {
   page: number;
@@ -31,10 +24,12 @@ interface ListMeta {
   totalPages: number;
 }
 
-export function OrdenesDashboard() {
+type FiltroActivo = "todos" | "activos" | "inactivos";
+
+export function TecnicosDashboard() {
   const router = useRouter();
   const { user, ready } = useAuth();
-  const [items, setItems] = useState<Orden[]>([]);
+  const [items, setItems] = useState<Tecnico[]>([]);
   const [meta, setMeta] = useState<ListMeta>({
     page: 1,
     limit: 10,
@@ -42,18 +37,16 @@ export function OrdenesDashboard() {
     totalPages: 1,
   });
   const [query, setQuery] = useState("");
+  const [filtro, setFiltro] = useState<FiltroActivo>("todos");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Orden | null>(null);
+  const [editing, setEditing] = useState<Tecnico | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
-  const [importMessage, setImportMessage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(
-    async (page = 1, search = query, pageSize = meta.limit) => {
+    async (page = 1, search = query, pageSize = meta.limit, activo = filtro) => {
       setLoading(true);
       setError(null);
       try {
@@ -62,18 +55,20 @@ export function OrdenesDashboard() {
           limit: String(pageSize),
         });
         if (search.trim()) params.set("q", search.trim());
-        const result = await apiRequestWithMeta<Orden[]>(
-          `/api/v1/ordenes?${params.toString()}`,
+        if (activo === "activos") params.set("activo", "true");
+        if (activo === "inactivos") params.set("activo", "false");
+        const result = await apiRequestWithMeta<Tecnico[]>(
+          `/api/v1/tecnicos?${params.toString()}`,
         );
         setItems(result.data);
         if (result.meta) setMeta(result.meta);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "No se pudieron cargar las órdenes");
+        setError(err instanceof Error ? err.message : "No se pudieron cargar los técnicos");
       } finally {
         setLoading(false);
       }
     },
-    [meta.limit, query],
+    [filtro, meta.limit, query],
   );
 
   useEffect(() => {
@@ -87,9 +82,8 @@ export function OrdenesDashboard() {
       return;
     }
     void load(1, query);
-    // Solo al entrar con sesión lista
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, router]);
+  }, [ready, user, router, filtro]);
 
   if (!ready || !user || !esRolPanel(user.rol)) {
     return (
@@ -105,27 +99,35 @@ export function OrdenesDashboard() {
     setModalOpen(true);
   }
 
-  function openEdit(orden: Orden) {
-    setEditing(orden);
+  function openEdit(tecnico: Tecnico) {
+    setEditing(tecnico);
     setFormError(null);
     setModalOpen(true);
   }
 
-  async function saveOrden(payload: OrdenPayload) {
+  async function saveTecnico(payload: TecnicoPayload) {
+    if (!editing && !payload.password) {
+      setFormError("La contraseña es obligatoria al crear un técnico");
+      return;
+    }
     setSaving(true);
     setFormError(null);
     try {
       const body = {
-        ...payload,
-        comentario: payload.comentario.trim() ? payload.comentario.trim() : null,
+        nombre: payload.nombre,
+        email: payload.email,
+        telefono: payload.telefono.trim() ? payload.telefono.trim() : null,
+        zona: payload.zona.trim() ? payload.zona.trim() : null,
+        activo: payload.activo,
+        ...(payload.password ? { password: payload.password } : {}),
       };
       if (editing) {
-        await apiRequest<Orden>(`/api/v1/ordenes/${editing.id}`, {
+        await apiRequest<Tecnico>(`/api/v1/tecnicos/${editing.id}`, {
           method: "PATCH",
           body: JSON.stringify(body),
         });
       } else {
-        await apiRequest<Orden>("/api/v1/ordenes", {
+        await apiRequest<Tecnico>("/api/v1/tecnicos", {
           method: "POST",
           body: JSON.stringify(body),
         });
@@ -139,10 +141,22 @@ export function OrdenesDashboard() {
     }
   }
 
-  function removeOrden(orden: Orden) {
+  async function setActivo(tecnico: Tecnico, activo: boolean) {
+    try {
+      await apiRequest<Tecnico>(`/api/v1/tecnicos/${tecnico.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ activo }),
+      });
+      await load(meta.page, query);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo actualizar");
+    }
+  }
+
+  function removeTecnico(tecnico: Tecnico) {
     confirmDialog({
-      message: `¿Eliminar la orden ${formatOrdenNumero(orden.orden)}?`,
-      header: "Eliminar orden",
+      message: `¿Eliminar a ${tecnico.nombre}? Ya no podrá entrar a la app de campo.`,
+      header: "Eliminar técnico",
       icon: "pi pi-exclamation-triangle",
       acceptLabel: "Eliminar",
       rejectLabel: "Cancelar",
@@ -150,7 +164,7 @@ export function OrdenesDashboard() {
       accept: () => {
         void (async () => {
           try {
-            await apiRequest(`/api/v1/ordenes/${orden.id}`, { method: "DELETE" });
+            await apiRequest(`/api/v1/tecnicos/${tecnico.id}`, { method: "DELETE" });
             await load(meta.page, query);
           } catch (err) {
             setError(err instanceof Error ? err.message : "No se pudo eliminar");
@@ -160,48 +174,8 @@ export function OrdenesDashboard() {
     });
   }
 
-  async function importExcel(file: File) {
-    setImporting(true);
-    setError(null);
-    setImportMessage(null);
-    try {
-      const parsed = await parseOrdenesExcel(await file.arrayBuffer());
-      let inserted = 0;
-      let skipped = parsed.omitidas;
-      const duplicates: string[] = [];
-      const chunkSize = 500;
-
-      for (let i = 0; i < parsed.ordenes.length; i += chunkSize) {
-        const chunk = parsed.ordenes.slice(i, i + chunkSize);
-        const result = await apiRequest<BulkImportResult>("/api/v1/ordenes/bulk", {
-          method: "POST",
-          body: JSON.stringify(chunk),
-        });
-        inserted += result.inserted;
-        skipped += result.skipped;
-        duplicates.push(...result.duplicates);
-      }
-
-      const parts = [`Se importaron ${inserted} órdenes.`];
-      if (skipped > 0) parts.push(`Se omitieron ${skipped}.`);
-      if (duplicates.length > 0) {
-        parts.push(
-          `Duplicadas: ${duplicates.slice(0, 8).join(", ")}${duplicates.length > 8 ? "…" : ""}.`,
-        );
-      }
-      if (parsed.avisos.length > 0) parts.push(parsed.avisos.join(" "));
-      setImportMessage(parts.join(" "));
-      await load(1, query);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo importar el Excel");
-    } finally {
-      setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }
-
   return (
-    <AppShell title="Panel de órdenes" subtitle="Órdenes de campo">
+    <AppShell title="Técnicos recuperadores" subtitle="Usuarios de campo">
       <ConfirmDialog />
 
       <main className="mx-auto grid w-full flex-1 grid-cols-4 gap-4 px-4 py-6 sm:px-6">
@@ -215,44 +189,33 @@ export function OrdenesDashboard() {
           <InputText
             value={query}
             className="w-full"
-            placeholder="Buscar orden, cliente, ciudad, teléfono..."
+            placeholder="Buscar nombre, email, teléfono o zona..."
             onChange={(event) => setQuery(event.target.value)}
           />
           <div className="flex flex-wrap gap-2">
             <Button type="submit" label="Buscar" icon="pi pi-search" outlined />
-            <Button type="button" label="Nueva orden" icon="pi pi-plus" onClick={openCreate} />
-            <Button
-              type="button"
-              label={importing ? "Cargando Excel..." : "Cargar Excel"}
-              icon="pi pi-upload"
-              outlined
-              loading={importing}
-              onClick={() => fileInputRef.current?.click()}
-            />
-            <Button
-              type="button"
-              label="Plantilla"
-              link
-              onClick={() => void downloadPlantillaExcel()}
-            />
+            <Button type="button" label="Nuevo técnico" icon="pi pi-plus" onClick={openCreate} />
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void importExcel(file);
-            }}
-          />
         </form>
 
-        {importMessage ? (
-          <div className="col-span-4">
-            <Message severity="success" text={importMessage} />
-          </div>
-        ) : null}
+        <div className="col-span-4 flex flex-wrap gap-2">
+          {(
+            [
+              ["todos", "Todos"],
+              ["activos", "Activos"],
+              ["inactivos", "Inactivos"],
+            ] as const
+          ).map(([id, label]) => (
+            <Button
+              key={id}
+              type="button"
+              label={label}
+              size="small"
+              outlined={filtro !== id}
+              onClick={() => setFiltro(id)}
+            />
+          ))}
+        </div>
 
         {error ? (
           <div className="col-span-4">
@@ -265,65 +228,47 @@ export function OrdenesDashboard() {
             value={items}
             dataKey="id"
             loading={loading}
-            emptyMessage="No hay órdenes todavía"
+            emptyMessage="No hay técnicos recuperadores todavía"
             tableStyle={{ minWidth: "100%" }}
             stripedRows
           >
             <Column
-              header="Orden"
-              style={{ width: "12%" }}
-              body={(row: Orden) => <Tag value={formatOrdenNumero(row.orden)} severity="info" />}
+              header="Nombre"
+              style={{ width: "20%" }}
+              body={(row: Tecnico) => <strong>{titleCase(row.nombre)}</strong>}
             />
-            <Column
-              header="Cliente"
-              style={{ width: "16%" }}
-              body={(row: Orden) => {
-                const { nombre } = parseNombreCliente(row.cliente);
-                return <strong>{titleCase(nombre || row.cliente)}</strong>;
-              }}
-            />
-            <Column
-              header="Código cliente"
-              style={{ width: "10%" }}
-              body={(row: Orden) => {
-                const { codigo } = parseNombreCliente(row.cliente);
-                return codigo ? <Tag value={codigo} /> : "—";
-              }}
-            />
-            <Column header="Ciudad" style={{ width: "10%" }} body={(row: Orden) => titleCase(row.ciudad)} />
-            <Column
-              header="Técnico"
-              style={{ width: "12%" }}
-              body={(row: Orden) =>
-                row.tecnico?.nombre ? (
-                  <Tag value={titleCase(row.tecnico.nombre)} />
-                ) : (
-                  "Sin asignar"
-                )
-              }
-            />
-            <Column header="Colonia" style={{ width: "12%" }} body={(row: Orden) => titleCase(row.colonia)} />
-            <Column
-              header="Dirección"
-              style={{ width: "18%" }}
-              body={(row: Orden) => titleCase(row.direccion)}
-            />
+            <Column field="email" header="Email" style={{ width: "20%" }} />
             <Column
               header="Teléfono"
-              style={{ width: "12%" }}
-              body={(row: Orden) => formatTelefono(row.telefono)}
+              style={{ width: "14%" }}
+              body={(row: Tecnico) =>
+                row.telefono ? formatTelefono(row.telefono) : "—"
+              }
             />
             <Column
-              header="Comentario"
-              style={{ width: "12%" }}
-              body={(row: Orden) =>
-                row.comentario?.trim() ? titleCase(row.comentario) : "Sin comentario"
-              }
+              header="Zona"
+              style={{ width: "16%" }}
+              body={(row: Tecnico) => (row.zona ? titleCase(row.zona) : "—")}
+            />
+            <Column
+              header="Rol"
+              style={{ width: "14%" }}
+              body={(row: Tecnico) => <Tag value={etiquetaRol(row.rol)} />}
+            />
+            <Column
+              header="Estado"
+              style={{ width: "10%" }}
+              body={(row: Tecnico) => (
+                <Tag
+                  value={row.activo ? "Activo" : "Inactivo"}
+                  severity={row.activo ? "success" : "secondary"}
+                />
+              )}
             />
             <Column
               header="Acciones"
-              style={{ width: "10%" }}
-              body={(row: Orden) => (
+              style={{ width: "16%" }}
+              body={(row: Tecnico) => (
                 <div className="flex flex-wrap gap-1">
                   <Button
                     type="button"
@@ -334,11 +279,18 @@ export function OrdenesDashboard() {
                   />
                   <Button
                     type="button"
+                    label={row.activo ? "Desactivar" : "Activar"}
+                    size="small"
+                    text
+                    onClick={() => void setActivo(row, !row.activo)}
+                  />
+                  <Button
+                    type="button"
                     label="Borrar"
                     size="small"
                     text
                     severity="danger"
-                    onClick={() => removeOrden(row)}
+                    onClick={() => removeTecnico(row)}
                   />
                 </div>
               )}
@@ -406,13 +358,13 @@ export function OrdenesDashboard() {
         </div>
       </main>
 
-      <OrdenFormModal
+      <TecnicoFormModal
         open={modalOpen}
-        orden={editing}
+        tecnico={editing}
         saving={saving}
         error={formError}
         onClose={() => setModalOpen(false)}
-        onSubmit={saveOrden}
+        onSubmit={saveTecnico}
       />
     </AppShell>
   );

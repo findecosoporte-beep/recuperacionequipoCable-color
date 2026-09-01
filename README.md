@@ -35,6 +35,8 @@ Las rutas de `/api/v1` también aceptan `X-API-Key` para scripts. En desarrollo,
 
 Usuario inicial (tras `npm run db:seed`): `admin@ordenes.local` / `Admin123!`
 
+Los **técnicos recuperadores** se dan de alta en el panel (`/tecnicos`). Usan el mismo login de la API para la app de campo; no entran al panel web. En **Asignación** (`/asignacion`) se les pasan las órdenes por ciudad.
+
 ## Endpoints
 
 | Método   | Ruta                   | Descripción                        |
@@ -48,6 +50,14 @@ Usuario inicial (tras `npm run db:seed`): `admin@ordenes.local` / `Admin123!`
 | `PATCH`  | `/api/v1/ordenes/:id`  | Actualizar campos                  |
 | `DELETE` | `/api/v1/ordenes/:id`  | Eliminar                           |
 | `POST`   | `/api/v1/ordenes/bulk` | Importar hasta 500 órdenes         |
+| `GET`    | `/api/v1/tecnicos`     | Listado de técnicos recuperadores  |
+| `POST`   | `/api/v1/tecnicos`     | Crear técnico                      |
+| `GET`    | `/api/v1/tecnicos/:id` | Consultar técnico                  |
+| `PATCH`  | `/api/v1/tecnicos/:id` | Actualizar o activar/desactivar    |
+| `DELETE` | `/api/v1/tecnicos/:id` | Eliminar técnico                   |
+| `GET`    | `/api/v1/asignaciones` | Órdenes agrupadas por ciudad       |
+| `POST`   | `/api/v1/asignaciones` | Asignar ciudad a un técnico        |
+| `POST`   | `/api/v1/asignaciones/liberar` | Liberar ciudad de un técnico |
 
 ### Filtros de listado
 
