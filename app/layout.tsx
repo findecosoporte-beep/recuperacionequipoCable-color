@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Órdenes de campo",
-  description: "Panel React para órdenes de entrega.",
+  title: "Cable Color · Órdenes",
+  description: "Panel de recuperaciones Cable Color.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -18,10 +18,15 @@ export default function LoginPage() {
   }, [ready, user, router]);
 
   return (
-    <div className="flex min-h-full flex-1 items-center justify-center px-4 py-10">
+    <div className="ordenes-login-screen flex min-h-full flex-1 items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md" title="Iniciar sesión">
+        <img
+          src="/cable-color.jpg"
+          alt="Cable Color"
+          className="ordenes-brand-logo"
+        />
         <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary-color)]">
-          Órdenes de campo
+          Cable Color
         </p>
         <p className="mb-6 mt-0 text-sm text-[var(--text-color-secondary)]">
           Entra con tu email y contraseña para ver las órdenes.

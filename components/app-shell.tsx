@@ -61,8 +61,13 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
       <aside className="ordenes-sidebar">
         <div className="ordenes-sidebar-inner">
           <div className="ordenes-sidebar-brand">
-            <p className="ordenes-sidebar-kicker">Órdenes de campo</p>
-            <p className="ordenes-sidebar-title">Panel</p>
+            <img
+              src="/cable-color.jpg"
+              alt="Cable Color"
+              className="ordenes-sidebar-logo"
+            />
+            <p className="ordenes-sidebar-kicker">Cable Color</p>
+            <p className="ordenes-sidebar-title">Panel de órdenes</p>
           </div>
           <Menu model={items} popup={false} className="ordenes-sidebar-menu" />
           <div className="ordenes-sidebar-footer">

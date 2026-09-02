@@ -34,7 +34,7 @@ export default function AccesoAppPage() {
     <div className="flex min-h-full flex-1 items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md" title="App de campo">
         <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary-color)]">
-          Técnico recuperador
+          Cable Color
         </p>
         <p className="mb-6 mt-2 text-sm text-[var(--text-color-secondary)]">
           Hola {user.nombre}. Esta cuenta es para la aplicación de técnicos, no

@@ -4,8 +4,9 @@
 @import "../styles/aura-light-green.css";
 
 :root {
-  --background: var(--surface-ground, #f8fafc);
+  --background: var(--surface-ground, #f7f4fb);
   --foreground: var(--text-color, #334155);
+  --brand-purple: #5c2d91;
 }
 
 @theme inline {
@@ -22,9 +23,22 @@ body {
 
 body {
   margin: 0;
-  background: var(--surface-ground, #f8fafc);
+  background: var(--surface-ground, #f7f4fb);
   color: var(--text-color, #334155);
   font-family: var(--font-family, var(--font-sans), system-ui, sans-serif);
+}
+
+.ordenes-login-screen {
+  background: var(--primary-color);
+}
+
+.ordenes-brand-logo {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 1.25rem;
+  border-radius: 12px;
 }
 
 .ordenes-app-header {
@@ -76,6 +90,16 @@ body:has(.ordenes-shell) {
 
 .ordenes-sidebar-brand {
   padding: 1.25rem 1.1rem 0.75rem;
+}
+
+.ordenes-sidebar-logo {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: 72px;
+  object-fit: contain;
+  margin-bottom: 0.85rem;
+  border-radius: 8px;
 }
 
 .ordenes-sidebar-kicker {
