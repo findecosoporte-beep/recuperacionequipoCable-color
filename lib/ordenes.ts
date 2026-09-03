@@ -7,6 +7,7 @@ import {
 } from "@/lib/acuse";
 import { esOrdenRecuperada } from "@/lib/estado-orden";
 import { notFound } from "@/lib/errors";
+import { limitesDiaUtc } from "@/lib/fecha";
 import type { ListQuery, OrdenCreateInput, OrdenUpdateInput } from "@/lib/validators";
 import type { Prisma } from "@prisma/client";
 
@@ -22,12 +23,25 @@ const ordenInclude = {
   acuse: true,
 } as const;
 
-function serializeOrden<T extends { acuse?: Parameters<typeof acusePublico>[0] | null }>(
-  orden: T,
-) {
+function serializeOrden<
+  T extends {
+    comentario?: string | null;
+    updatedAt: Date;
+    acuse?:
+      | (Parameters<typeof acusePublico>[0] & { updatedAt?: Date })
+      | null;
+  },
+>(orden: T) {
+  const acuse = acusePublico(orden.acuse);
+  const recuperadaEn = orden.acuse?.updatedAt
+    ? new Date(orden.acuse.updatedAt).toISOString()
+    : acuse || esOrdenRecuperada(orden.comentario)
+      ? new Date(orden.updatedAt).toISOString()
+      : null;
   return {
     ...orden,
-    acuse: acusePublico(orden.acuse),
+    acuse,
+    recuperadaEn,
   };
 }
 
@@ -80,7 +94,28 @@ export function noAnuladaWhere() {
   };
 }
 
+function esYmd(value: string | undefined): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function rangoRecuperada(query: ListQuery) {
+  const desde = esYmd(query.desde) ? limitesDiaUtc(query.desde, false) : undefined;
+  const hasta = esYmd(query.hasta) ? limitesDiaUtc(query.hasta, true) : undefined;
+  if (!desde && !hasta) return null;
+  const updatedAt = {
+    ...(desde ? { gte: desde } : {}),
+    ...(hasta ? { lte: hasta } : {}),
+  };
+  return {
+    OR: [
+      { acuse: { is: { updatedAt } } },
+      { AND: [{ acuse: { is: null } }, { updatedAt }] },
+    ],
+  };
+}
+
 function buildWhere(query: ListQuery) {
+  const rango = query.estado === "recuperada" ? rangoRecuperada(query) : null;
   const filters = [
     ...(query.ciudad ? [{ ciudad: contains(query.ciudad) }] : []),
     ...(query.colonia ? [{ colonia: contains(query.colonia) }] : []),
@@ -98,6 +133,7 @@ function buildWhere(query: ListQuery) {
     ...(query.recuperadoPorId ? [{ recuperadoPorId: query.recuperadoPorId }] : []),
     ...(query.asignacion === "sin_asignar" ? [{ tecnicoId: null }] : []),
     ...(query.asignacion === "asignada" ? [{ tecnicoId: { not: null } }] : []),
+    ...(rango ? [rango] : []),
     ...(query.q
       ? [
           {
@@ -128,6 +164,8 @@ function buildOrderBy(sort: ListQuery["sort"], order: ListQuery["order"]) {
       return { cliente: order } as const;
     case "ciudad":
       return { ciudad: order } as const;
+    case "recuperadaEn":
+      return [{ acuse: { updatedAt: order } }, { updatedAt: order }];
     default:
       return { createdAt: order } as const;
   }

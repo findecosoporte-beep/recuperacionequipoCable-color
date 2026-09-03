@@ -79,6 +79,7 @@ export interface Orden {
   tecnicoId?: string | null;
   tecnico?: OrdenTecnico | null;
   acuse?: AcuseRecibido | null;
+  recuperadaEn?: string | null;
   createdAt: string;
   updatedAt: string;
 }

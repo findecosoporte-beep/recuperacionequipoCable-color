@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth-provider";
 import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
+import { RecuperadasPorSemana } from "@/components/recuperadas-por-semana";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import {
   estadoOrden,
@@ -32,6 +33,12 @@ import {
   titleCase,
   visiblePages,
 } from "@/lib/format-orden";
+import {
+  formatFechaHora,
+  inicioSemanaYmd,
+  sumarDiasYmd,
+  ymdEnZona,
+} from "@/lib/fecha";
 import type { Orden } from "@/lib/types";
 
 interface ListMeta {
@@ -87,29 +94,48 @@ export function EstadoDashboard() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recuperoOrden, setRecuperoOrden] = useState<Orden | null>(null);
+  const [vista, setVista] = useState<"lista" | "semana">("lista");
+  const [semanaInicio, setSemanaInicio] = useState(() => inicioSemanaYmd());
   const requestId = useRef(0);
   const filtroRef = useRef(filtro);
+  const vistaRef = useRef(vista);
+  const semanaRef = useRef(semanaInicio);
   filtroRef.current = filtro;
+  vistaRef.current = vista;
+  semanaRef.current = semanaInicio;
 
   const load = useCallback(
     async (page = 1, search = query, pageSize = meta.limit, estado?: FiltroEstado) => {
       const selected = estado ?? filtroRef.current;
       const currentRequest = ++requestId.current;
+      const esSemana = selected === "recuperada" && vistaRef.current === "semana";
       setLoading(true);
       setError(null);
       try {
         const params = new URLSearchParams({
-          page: String(page),
-          limit: String(pageSize),
+          page: String(esSemana ? 1 : page),
+          limit: String(esSemana ? 100 : pageSize),
           estado: selected,
         });
         if (search.trim()) params.set("q", search.trim());
+        if (selected === "recuperada") {
+          params.set("sort", "recuperadaEn");
+          params.set("order", "desc");
+          if (esSemana) {
+            params.set("desde", semanaRef.current);
+            params.set("hasta", sumarDiasYmd(semanaRef.current, 6));
+          }
+        }
         const result = await apiRequestWithMeta<Orden[]>(
           `/api/v1/ordenes?${params.toString()}`,
         );
         if (currentRequest !== requestId.current) return;
         setItems(result.data);
-        if (result.meta) setMeta(result.meta);
+        if (result.meta) {
+          setMeta(
+            esSemana ? { ...result.meta, limit: pageSize, page: 1 } : result.meta,
+          );
+        }
       } catch (err) {
         if (currentRequest !== requestId.current) return;
         setError(err instanceof Error ? err.message : "No se pudieron cargar las órdenes");
@@ -131,9 +157,9 @@ export function EstadoDashboard() {
       return;
     }
     void load(1, query, meta.limit, filtro);
-    // Recarga al entrar o al cambiar de filtro. La búsqueda usa el botón Buscar.
+    // Recarga al entrar, al cambiar de filtro o de vista semanal.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, router, filtro]);
+  }, [ready, user, router, filtro, vista, semanaInicio]);
 
   async function marcarRecuperada(orden: Orden, equipos: string) {
     setSavingId(orden.id);
@@ -272,6 +298,25 @@ export function EstadoDashboard() {
           ))}
         </div>
 
+        {filtro === "recuperada" ? (
+          <div className="col-span-4 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              label="Por fecha y hora"
+              icon="pi pi-clock"
+              outlined={vista !== "lista"}
+              onClick={() => setVista("lista")}
+            />
+            <Button
+              type="button"
+              label="Semanal"
+              icon="pi pi-calendar"
+              outlined={vista !== "semana"}
+              onClick={() => setVista("semana")}
+            />
+          </div>
+        ) : null}
+
         {error ? (
           <div className="col-span-4">
             <Message severity="error" text={error} />
@@ -279,6 +324,17 @@ export function EstadoDashboard() {
         ) : null}
 
         <div className="col-span-4">
+          {filtro === "recuperada" && vista === "semana" ? (
+            <RecuperadasPorSemana
+              items={items}
+              semanaInicio={semanaInicio}
+              loading={loading}
+              onPrev={() => setSemanaInicio(sumarDiasYmd(semanaInicio, -7))}
+              onNext={() => setSemanaInicio(sumarDiasYmd(semanaInicio, 7))}
+              onHoy={() => setSemanaInicio(inicioSemanaYmd(ymdEnZona()))}
+            />
+          ) : (
+            <>
           <DataTable
             value={items}
             dataKey="id"
@@ -328,9 +384,9 @@ export function EstadoDashboard() {
             {filtro === "recuperada" ? (
               <>
                 <Column
-                  header="Fecha acuse"
-                  style={{ width: "10%" }}
-                  body={(row: Orden) => row.acuse?.fecha || "—"}
+                  header="Fecha y hora"
+                  style={{ width: "12%" }}
+                  body={(row: Orden) => formatFechaHora(row.recuperadaEn)}
                 />
                 <Column
                   header="Modem/ONU"
@@ -579,6 +635,8 @@ export function EstadoDashboard() {
               />
             </div>
           </div>
+            </>
+          )}
         </div>
       </main>
     </AppShell>
