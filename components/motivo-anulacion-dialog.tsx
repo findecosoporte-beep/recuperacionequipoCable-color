@@ -19,6 +19,7 @@ export function MotivoAnulacionDialog({ orden, saving, onClose, onConfirm }: Pro
       visible={Boolean(orden)}
       modal
       style={{ width: "90vw", maxWidth: "32rem" }}
+      contentStyle={{ maxHeight: "70vh", overflow: "auto" }}
       header="Motivo de anulación"
       onHide={onClose}
     >
