@@ -41,15 +41,26 @@ export const PATCH = apiHandler(async (request: NextRequest, params) => {
   const body = await readJson(request);
   const input = ordenUpdateSchema.parse(body);
   if (auth.kind === "jwt" && auth.user.rol === ROL_TECNICO) {
-    const permitido: { comentario?: typeof input.comentario; estadoAnulacion?: typeof input.estadoAnulacion } = {};
+    const permitido: {
+      comentario?: typeof input.comentario;
+      estadoAnulacion?: typeof input.estadoAnulacion;
+      motivoAnulacion?: typeof input.motivoAnulacion;
+    } = {};
     if (input.comentario !== undefined) {
       permitido.comentario = input.comentario;
     }
     if (input.estadoAnulacion !== undefined) {
       permitido.estadoAnulacion = input.estadoAnulacion;
     }
-    if (permitido.comentario === undefined && permitido.estadoAnulacion === undefined) {
-      throw forbidden("Solo puedes actualizar el comentario o el estado de anulación");
+    if (input.motivoAnulacion !== undefined) {
+      permitido.motivoAnulacion = input.motivoAnulacion;
+    }
+    if (
+      permitido.comentario === undefined &&
+      permitido.estadoAnulacion === undefined &&
+      permitido.motivoAnulacion === undefined
+    ) {
+      throw forbidden("Solo puedes actualizar el comentario, el estado o el motivo de anulación");
     }
     return json(await updateOrden(id, permitido, auth.kind === "jwt" ? auth.user.sub : null));
   }

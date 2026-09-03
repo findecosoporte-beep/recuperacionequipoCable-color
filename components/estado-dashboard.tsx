@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth-provider";
 import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
+import { MotivoAnulacionDialog } from "@/components/motivo-anulacion-dialog";
 import { RecuperadasPorSemana } from "@/components/recuperadas-por-semana";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import {
@@ -94,6 +95,7 @@ export function EstadoDashboard() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recuperoOrden, setRecuperoOrden] = useState<Orden | null>(null);
+  const [anularOrden, setAnularOrden] = useState<Orden | null>(null);
   const [vista, setVista] = useState<"lista" | "semana">("lista");
   const [semanaInicio, setSemanaInicio] = useState(() => inicioSemanaYmd());
   const requestId = useRef(0);
@@ -197,13 +199,24 @@ export function EstadoDashboard() {
     }
   }
 
-  async function setAnulacion(orden: Orden, estadoAnulacion: EstadoAnulacion | null) {
+  async function setAnulacion(
+    orden: Orden,
+    estadoAnulacion: EstadoAnulacion | null,
+    motivoAnulacion?: string | null,
+  ) {
     setSavingId(orden.id);
     setError(null);
     try {
       await apiRequest<Orden>(`/api/v1/ordenes/${orden.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ estadoAnulacion }),
+        body: JSON.stringify({
+          estadoAnulacion,
+          ...(estadoAnulacion === null
+            ? { motivoAnulacion: null }
+            : motivoAnulacion !== undefined
+              ? { motivoAnulacion }
+              : {}),
+        }),
       });
       if (estadoAnulacion === "por_anular") {
         setFiltro("por_anular");
@@ -259,6 +272,16 @@ export function EstadoDashboard() {
         onConfirm={(equipos) => {
           if (!recuperoOrden) return;
           void marcarRecuperada(recuperoOrden, equipos);
+        }}
+      />
+      <MotivoAnulacionDialog
+        orden={anularOrden}
+        saving={Boolean(anularOrden && savingId === anularOrden.id)}
+        onClose={() => setAnularOrden(null)}
+        onConfirm={(motivo) => {
+          if (!anularOrden) return;
+          setAnularOrden(null);
+          void setAnulacion(anularOrden, "por_anular", motivo);
         }}
       />
 
@@ -381,6 +404,19 @@ export function EstadoDashboard() {
                 );
               }}
             />
+            {filtro === "por_anular" || filtro === "anulada" ? (
+              <Column
+                header="Motivo"
+                style={{ width: "18%" }}
+                body={(row: Orden) =>
+                  row.motivoAnulacion ? (
+                    <span className="text-sm">{row.motivoAnulacion}</span>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
+            ) : null}
             {filtro === "recuperada" ? (
               <>
                 <Column
@@ -531,15 +567,7 @@ export function EstadoDashboard() {
                         text
                         severity="danger"
                         loading={busy}
-                        onClick={() =>
-                          confirmarAnulacion(
-                            row,
-                            "por_anular",
-                            `¿Mandar a anular la orden ${formatOrdenNumero(row.orden)}?`,
-                            "Mandar a anular",
-                            "Mandar a anular",
-                          )
-                        }
+                        onClick={() => setAnularOrden(row)}
                       />
                     </div>
                   );
@@ -561,15 +589,7 @@ export function EstadoDashboard() {
                       text
                       severity="danger"
                       loading={busy}
-                      onClick={() =>
-                        confirmarAnulacion(
-                          row,
-                          "por_anular",
-                          `¿Mandar a anular la orden ${formatOrdenNumero(row.orden)}?`,
-                          "Mandar a anular",
-                          "Mandar a anular",
-                        )
-                      }
+                      onClick={() => setAnularOrden(row)}
                     />
                   </div>
                 );

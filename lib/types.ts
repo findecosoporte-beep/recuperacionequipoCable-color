@@ -76,6 +76,7 @@ export interface Orden {
   telefono: string;
   comentario: string | null;
   estadoAnulacion: string | null;
+  motivoAnulacion?: string | null;
   tecnicoId?: string | null;
   tecnico?: OrdenTecnico | null;
   acuse?: AcuseRecibido | null;

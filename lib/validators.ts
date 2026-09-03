@@ -27,6 +27,13 @@ export const ordenCreateSchema = z.object({
     .nullable()
     .transform((value) => (value ? value : null)),
   estadoAnulacion: z.enum(["por_anular", "anulada"]).nullable().optional(),
+  motivoAnulacion: z
+    .string()
+    .trim()
+    .max(300, "motivoAnulacion no puede superar 300 caracteres")
+    .optional()
+    .nullable()
+    .transform((value) => (value ? value : null)),
   tecnicoId: z
     .string()
     .trim()

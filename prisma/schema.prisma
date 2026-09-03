@@ -17,6 +17,7 @@ model Orden {
   telefono        String
   comentario      String?   @db.Text
   estadoAnulacion String?   @map("estado_anulacion")
+  motivoAnulacion String?   @map("motivo_anulacion") @db.Text
   tecnicoId       String?   @map("tecnico_id")
   tecnico         Usuario?  @relation("OrdenesAsignadas", fields: [tecnicoId], references: [id], onDelete: SetNull)
   recuperadoPorId String?   @map("recuperado_por_id")

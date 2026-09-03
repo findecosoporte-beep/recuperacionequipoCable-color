@@ -268,6 +268,9 @@ export async function updateOrden(
 ) {
   const current = await findOrden(idOrNumero);
   const data: OrdenUpdateInput & { recuperadoPorId?: string | null } = { ...input };
+  if (input.estadoAnulacion === null) {
+    data.motivoAnulacion = null;
+  }
   const acuseDelComentario =
     input.comentario !== undefined ? extraerAcuse(input.comentario) : null;
 
