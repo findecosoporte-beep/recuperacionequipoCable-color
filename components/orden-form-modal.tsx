@@ -63,7 +63,9 @@ export function OrdenFormModal({
         colonia: orden.colonia,
         direccion: orden.direccion,
         telefono: orden.telefono,
-        comentario: orden.comentario ?? "",
+        comentario: orden.comentario
+          ? orden.comentario.replace(/---ACUSE---[\s\S]*?---FIN-ACUSE---/g, "").trim()
+          : "",
       });
       return;
     }

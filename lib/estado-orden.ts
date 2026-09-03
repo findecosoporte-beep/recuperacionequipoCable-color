@@ -14,7 +14,11 @@ export function comentarioNormalizado(comentario: string | null | undefined): st
     .toLowerCase();
 }
 
-export function esOrdenRecuperada(comentario: string | null | undefined): boolean {
+export function esOrdenRecuperada(
+  comentario: string | null | undefined,
+  acuse?: unknown | null,
+): boolean {
+  if (acuse) return true;
   const raw = comentario ?? "";
   if (raw.includes("---ACUSE---")) return true;
   // Solo la marca con acento que escribe la app. "RECUPERO EQUIPO: SI" es el trabajo pendiente.
@@ -33,10 +37,11 @@ export function esOrdenPorRecuperar(comentario: string | null | undefined): bool
 export function estadoOrden(orden: {
   comentario: string | null | undefined;
   estadoAnulacion?: string | null;
+  acuse?: unknown | null;
 }): EstadoOrden {
   if (orden.estadoAnulacion === "anulada") return "anulada";
   if (orden.estadoAnulacion === "por_anular") return "por_anular";
-  if (esOrdenRecuperada(orden.comentario)) return "recuperada";
+  if (esOrdenRecuperada(orden.comentario, orden.acuse)) return "recuperada";
   if (esOrdenPorRecuperar(orden.comentario)) return "por_recuperar";
   return "sin_registro";
 }

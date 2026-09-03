@@ -14,6 +14,7 @@ import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { OrdenFormModal } from "@/components/orden-form-modal";
+import { comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import { downloadPlantillaExcel, parseOrdenesExcel } from "@/lib/excel-import";
 import { esOrdenRecuperada, withEquiposRecuperados, withRecupero } from "@/lib/estado-orden";
@@ -347,16 +348,33 @@ export function OrdenesDashboard() {
             <Column
               header="Comentario"
               style={{ width: "12%" }}
-              body={(row: Orden) =>
-                row.comentario?.trim() ? titleCase(row.comentario) : "Sin comentario"
-              }
+              body={(row: Orden) => {
+                const nota = comentarioSinAcuse(row.comentario);
+                const acuse = row.acuse;
+                return (
+                  <div className="flex flex-col gap-1">
+                    <span>
+                      {nota
+                        ? titleCase(nota)
+                        : acuse
+                          ? "Recuperada"
+                          : "Sin comentario"}
+                    </span>
+                    {acuse ? (
+                      <span className="text-xs text-[var(--text-color-secondary)]">
+                        Acuse: {resumenAcuse(acuse) || acuse.cliente}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              }}
             />
             <Column
               header="Acciones"
               style={{ width: "10%" }}
               body={(row: Orden) => (
                 <div className="flex flex-wrap gap-1">
-                  {!esOrdenRecuperada(row.comentario) && row.estadoAnulacion !== "anulada" ? (
+                  {!esOrdenRecuperada(row.comentario, row.acuse) && row.estadoAnulacion !== "anulada" ? (
                     <Button
                       type="button"
                       label="Recuperada"

@@ -21,6 +21,7 @@ model Orden {
   tecnico         Usuario?  @relation("OrdenesAsignadas", fields: [tecnicoId], references: [id], onDelete: SetNull)
   recuperadoPorId String?   @map("recuperado_por_id")
   recuperadoPor   Usuario?  @relation("OrdenesRecuperadas", fields: [recuperadoPorId], references: [id], onDelete: SetNull)
+  acuse           InfoAcuseRecibido?
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -52,4 +53,22 @@ model Usuario {
   @@index([email])
   @@index([rol])
   @@map("usuarios")
+}
+
+model InfoAcuseRecibido {
+  id             String   @id @default(cuid())
+  ordenId        String   @unique @map("orden_id")
+  orden          Orden    @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  cliente        String
+  contrato       String
+  fecha          String
+  modemOnu       String   @default("") @map("modem_onu")
+  router         String   @default("")
+  equipoDigital  String   @default("") @map("equipo_digital")
+  accesorios     Json     @default("{}")
+  nombreFirma    String   @map("nombre_firma")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("info_acuse_recibido")
 }

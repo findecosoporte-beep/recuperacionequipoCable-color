@@ -63,6 +63,77 @@ async function main() {
   });
 
   console.info(`Usuario listo: ${email}`);
+  await backfillAcuses();
+}
+
+async function backfillAcuses() {
+  const ordenes = await prisma.orden.findMany({
+    where: { comentario: { contains: "---ACUSE---" } },
+    select: { id: true, comentario: true },
+  });
+  let guardados = 0;
+
+  for (const orden of ordenes) {
+    const acuse = extraerAcuseCjs(orden.comentario);
+    const comentario = comentarioSinAcuseCjs(orden.comentario);
+    if (acuse) {
+      await prisma.infoAcuseRecibido.upsert({
+        where: { ordenId: orden.id },
+        create: { ordenId: orden.id, ...acuse },
+        update: acuse,
+      });
+      guardados += 1;
+    }
+    if (comentario !== (orden.comentario ?? "").trim()) {
+      await prisma.orden.update({
+        where: { id: orden.id },
+        data: { comentario: comentario || null },
+      });
+    }
+  }
+
+  if (ordenes.length > 0) {
+    console.info(`Acuses migrados a info_acuse_recibido: ${guardados}`);
+  }
+}
+
+function extraerAcuseCjs(comentario) {
+  const text = comentario ?? "";
+  const start = text.indexOf("---ACUSE---");
+  const end = text.indexOf("---FIN-ACUSE---");
+  if (start === -1 || end === -1 || end <= start) return null;
+  try {
+    const json = JSON.parse(text.slice(start + "---ACUSE---".length, end).trim());
+    if (!json || typeof json !== "object") return null;
+    const texto = (value) => (typeof value === "string" ? value.trim() : value == null ? "" : String(value).trim());
+    const accesorios = {};
+    const raw = json.accesorios ?? json.a;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      for (const [nombre, qty] of Object.entries(raw)) {
+        const n = Number(qty);
+        if (Number.isFinite(n) && n > 0) accesorios[nombre] = Math.min(9, Math.floor(n));
+      }
+    }
+    return {
+      cliente: texto(json.cliente ?? json.c),
+      contrato: texto(json.contrato ?? json.n),
+      fecha: texto(json.fecha ?? json.f),
+      modemOnu: texto(json.modemOnu ?? json.modem_onu ?? json.m),
+      router: texto(json.router ?? json.r),
+      equipoDigital: texto(json.equipoDigital ?? json.equipo_digital ?? json.d),
+      accesorios,
+      nombreFirma: texto(json.nombreFirma ?? json.nombre_firma ?? json.s),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function comentarioSinAcuseCjs(comentario) {
+  return (comentario ?? "")
+    .replace(/---ACUSE---[\s\S]*?---FIN-ACUSE---/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 main()

@@ -1,7 +1,14 @@
 import { prisma } from "@/lib/db";
+import {
+  acusePublico,
+  comentarioSinAcuse,
+  extraerAcuse,
+  type AcuseRecibido,
+} from "@/lib/acuse";
 import { esOrdenRecuperada } from "@/lib/estado-orden";
 import { notFound } from "@/lib/errors";
 import type { ListQuery, OrdenCreateInput, OrdenUpdateInput } from "@/lib/validators";
+import type { Prisma } from "@prisma/client";
 
 const tecnicoSelect = {
   id: true,
@@ -9,6 +16,33 @@ const tecnicoSelect = {
   email: true,
   activo: true,
 } as const;
+
+const ordenInclude = {
+  tecnico: { select: tecnicoSelect },
+  acuse: true,
+} as const;
+
+function serializeOrden<T extends { acuse?: Parameters<typeof acusePublico>[0] | null }>(
+  orden: T,
+) {
+  return {
+    ...orden,
+    acuse: acusePublico(orden.acuse),
+  };
+}
+
+function datosAcuse(acuse: AcuseRecibido) {
+  return {
+    cliente: acuse.cliente,
+    contrato: acuse.contrato,
+    fecha: acuse.fecha,
+    modemOnu: acuse.modemOnu,
+    router: acuse.router,
+    equipoDigital: acuse.equipoDigital,
+    accesorios: acuse.accesorios as Prisma.InputJsonValue,
+    nombreFirma: acuse.nombreFirma,
+  };
+}
 
 function contains(value: string) {
   return { contains: value, mode: "insensitive" as const };
@@ -25,12 +59,17 @@ const recuperadaComentarioFiltro = {
 };
 
 export const recuperadaFiltro = {
-  OR: [{ recuperadoPorId: { not: null } }, recuperadaComentarioFiltro],
+  OR: [
+    { recuperadoPorId: { not: null } },
+    recuperadaComentarioFiltro,
+    { acuse: { isNot: null } },
+  ],
 };
 
 export function noRecuperadaWhere() {
   return {
     recuperadoPorId: null,
+    acuse: { is: null },
     OR: [{ comentario: null }, { NOT: recuperadaComentarioFiltro }],
   };
 }
@@ -105,13 +144,13 @@ export async function listOrdenes(query: ListQuery) {
       orderBy,
       skip,
       take: query.limit,
-      include: { tecnico: { select: tecnicoSelect } },
+      include: ordenInclude,
     }),
     prisma.orden.count({ where }),
   ]);
 
   return {
-    items,
+    items: items.map(serializeOrden),
     meta: {
       page: query.page,
       limit: query.limit,
@@ -126,21 +165,22 @@ export async function findOrden(idOrNumero: string) {
     where: {
       OR: [{ id: idOrNumero }, { orden: idOrNumero }],
     },
-    include: { tecnico: { select: tecnicoSelect } },
+    include: ordenInclude,
   });
 
   if (!orden) {
     throw notFound("Orden no encontrada");
   }
 
-  return orden;
+  return serializeOrden(orden);
 }
 
 export async function createOrden(input: OrdenCreateInput) {
-  return prisma.orden.create({
+  const orden = await prisma.orden.create({
     data: input,
-    include: { tecnico: { select: tecnicoSelect } },
+    include: ordenInclude,
   });
+  return serializeOrden(orden);
 }
 
 export async function updateOrden(
@@ -150,21 +190,46 @@ export async function updateOrden(
 ) {
   const current = await findOrden(idOrNumero);
   const data: OrdenUpdateInput & { recuperadoPorId?: string | null } = { ...input };
+  const acuseDelComentario =
+    input.comentario !== undefined ? extraerAcuse(input.comentario) : null;
 
   if (input.comentario !== undefined) {
-    const seraRecuperada = esOrdenRecuperada(input.comentario);
+    const comentarioLimpio = comentarioSinAcuse(input.comentario);
+    data.comentario = comentarioLimpio ? comentarioLimpio : null;
+    const seraRecuperada = esOrdenRecuperada(data.comentario, acuseDelComentario ?? current.acuse);
     if (!seraRecuperada) {
       data.recuperadoPorId = null;
-    } else if (actorId && (!esOrdenRecuperada(current.comentario) || !current.recuperadoPorId)) {
+    } else if (actorId && (!esOrdenRecuperada(current.comentario, current.acuse) || !current.recuperadoPorId)) {
       data.recuperadoPorId = actorId;
     }
   }
 
-  return prisma.orden.update({
-    where: { id: current.id },
-    data,
-    include: { tecnico: { select: tecnicoSelect } },
+  const orden = await prisma.$transaction(async (tx) => {
+    await tx.orden.update({
+      where: { id: current.id },
+      data,
+    });
+
+    if (input.comentario !== undefined) {
+      if (acuseDelComentario) {
+        const campos = datosAcuse(acuseDelComentario);
+        await tx.infoAcuseRecibido.upsert({
+          where: { ordenId: current.id },
+          create: { ordenId: current.id, ...campos },
+          update: campos,
+        });
+      } else if (!esOrdenRecuperada(data.comentario)) {
+        await tx.infoAcuseRecibido.deleteMany({ where: { ordenId: current.id } });
+      }
+    }
+
+    return tx.orden.findUniqueOrThrow({
+      where: { id: current.id },
+      include: ordenInclude,
+    });
   });
+
+  return serializeOrden(orden);
 }
 
 export async function deleteOrden(idOrNumero: string) {
@@ -207,7 +272,7 @@ export async function createOrdenesBulk(inputs: OrdenCreateInput[]) {
           orden: { in: nuevos.map((item) => item.orden) },
         },
         orderBy: { createdAt: "desc" },
-        include: { tecnico: { select: tecnicoSelect } },
+        include: ordenInclude,
       })
     : [];
 
@@ -215,6 +280,6 @@ export async function createOrdenesBulk(inputs: OrdenCreateInput[]) {
     inserted: insertados.length,
     skipped: duplicados.size + duplicadosEnLote.length,
     duplicates: [...new Set([...duplicados, ...duplicadosEnLote])],
-    items: insertados,
+    items: insertados.map(serializeOrden),
   };
 }

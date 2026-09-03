@@ -36,6 +36,17 @@ export interface OrdenTecnico {
   activo: boolean;
 }
 
+export interface AcuseRecibido {
+  cliente: string;
+  contrato: string;
+  fecha: string;
+  modemOnu: string;
+  router: string;
+  equipoDigital: string;
+  accesorios: Record<string, number>;
+  nombreFirma: string;
+}
+
 export interface Orden {
   id: string;
   orden: string;
@@ -48,6 +59,7 @@ export interface Orden {
   estadoAnulacion: string | null;
   tecnicoId?: string | null;
   tecnico?: OrdenTecnico | null;
+  acuse?: AcuseRecibido | null;
   createdAt: string;
   updatedAt: string;
 }

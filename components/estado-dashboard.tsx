@@ -24,6 +24,7 @@ import {
   type EstadoAnulacion,
   type EstadoOrden,
 } from "@/lib/estado-orden";
+import { comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
 import { parseNombreCliente } from "@/lib/nombre-cliente";
 import {
   formatOrdenNumero,
@@ -328,9 +329,19 @@ export function EstadoDashboard() {
               header="Equipo / comentario"
               style={{ width: "16%" }}
               body={(row: Orden) => {
-                const equipos = equiposRecuperadosDe(row.comentario);
-                const texto = equipos || row.comentario?.trim() || "Sin comentario";
-                return titleCase(texto);
+                const nota = comentarioSinAcuse(row.comentario);
+                const equipos = equiposRecuperadosDe(nota) || resumenAcuse(row.acuse);
+                const texto = equipos || nota || (row.acuse ? "Acuse recibido" : "Sin comentario");
+                return (
+                  <div className="flex flex-col gap-1">
+                    <span>{titleCase(texto)}</span>
+                    {row.acuse?.nombreFirma ? (
+                      <span className="text-xs text-[var(--text-color-secondary)]">
+                        Recibió: {row.acuse.nombreFirma}
+                      </span>
+                    ) : null}
+                  </div>
+                );
               }}
             />
             <Column
