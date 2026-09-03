@@ -94,6 +94,30 @@ export function noAnuladaWhere() {
   };
 }
 
+function variantesEquipo(raw: string): string[] {
+  const trimmed = raw.trim();
+  const compacto = trimmed.replace(/[^A-Za-z0-9]/g, "");
+  return [...new Set([trimmed, compacto, trimmed.toUpperCase(), compacto.toUpperCase()])].filter(
+    (item) => item.length >= 4,
+  );
+}
+
+function filtroEquipo(equipo: string | undefined) {
+  if (!equipo) return [];
+  const variantes = variantesEquipo(equipo);
+  if (variantes.length === 0) return [];
+  return [
+    {
+      OR: variantes.flatMap((valor) => [
+        { comentario: contains(valor) },
+        { acuse: { is: { modemOnu: contains(valor) } } },
+        { acuse: { is: { router: contains(valor) } } },
+        { acuse: { is: { equipoDigital: contains(valor) } } },
+      ]),
+    },
+  ];
+}
+
 function esYmd(value: string | undefined): value is string {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
@@ -129,8 +153,24 @@ function buildWhere(query: ListQuery) {
       : []),
     ...(query.estado === "por_anular" ? [{ estadoAnulacion: "por_anular" }] : []),
     ...(query.estado === "anulada" ? [{ estadoAnulacion: "anulada" }] : []),
-    ...(query.tecnicoId ? [{ tecnicoId: query.tecnicoId }] : []),
-    ...(query.recuperadoPorId ? [{ recuperadoPorId: query.recuperadoPorId }] : []),
+    ...(query.tecnicoId && !query.equipo ? [{ tecnicoId: query.tecnicoId }] : []),
+    ...(query.recuperadoPorId && !query.equipo
+      ? [{ recuperadoPorId: query.recuperadoPorId }]
+      : []),
+    ...(query.equipo && (query.tecnicoId || query.recuperadoPorId)
+      ? [
+          {
+            OR: [
+              ...(query.tecnicoId ? [{ tecnicoId: query.tecnicoId }] : []),
+              ...(query.recuperadoPorId
+                ? [{ recuperadoPorId: query.recuperadoPorId }]
+                : []),
+              ...(query.tecnicoId ? [{ recuperadoPorId: query.tecnicoId }] : []),
+            ],
+          },
+        ]
+      : []),
+    ...filtroEquipo(query.equipo),
     ...(query.asignacion === "sin_asignar" ? [{ tecnicoId: null }] : []),
     ...(query.asignacion === "asignada" ? [{ tecnicoId: { not: null } }] : []),
     ...(rango ? [rango] : []),

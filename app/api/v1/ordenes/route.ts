@@ -17,9 +17,16 @@ export const GET = apiHandler(async (request: NextRequest) => {
   );
   const query =
     auth.kind === "jwt" && auth.user.rol === ROL_TECNICO
-      ? parsed.estado === "recuperada"
-        ? { ...parsed, recuperadoPorId: auth.user.sub, tecnicoId: undefined }
-        : { ...parsed, tecnicoId: auth.user.sub, recuperadoPorId: undefined }
+      ? parsed.equipo
+        ? {
+            ...parsed,
+            tecnicoId: auth.user.sub,
+            recuperadoPorId: auth.user.sub,
+            estado: undefined,
+          }
+        : parsed.estado === "recuperada"
+          ? { ...parsed, recuperadoPorId: auth.user.sub, tecnicoId: undefined }
+          : { ...parsed, tecnicoId: auth.user.sub, recuperadoPorId: undefined }
       : parsed;
   const result = await listOrdenes(query);
   return json(result.items, 200, { meta: result.meta });

@@ -78,6 +78,7 @@ export const listQuerySchema = z.object({
   order: z.enum(["asc", "desc"]).default("desc"),
   desde: emptyToUndefined(10),
   hasta: emptyToUndefined(10),
+  equipo: emptyToUndefined(80),
 });
 
 export const acuseListQuerySchema = z.object({
