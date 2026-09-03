@@ -24,7 +24,7 @@ import {
   type EstadoAnulacion,
   type EstadoOrden,
 } from "@/lib/estado-orden";
-import { comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
+import { accesoriosTexto, comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
 import { parseNombreCliente } from "@/lib/nombre-cliente";
 import {
   formatOrdenNumero,
@@ -325,25 +325,62 @@ export function EstadoDashboard() {
                 );
               }}
             />
-            <Column
-              header="Equipo / comentario"
-              style={{ width: "16%" }}
-              body={(row: Orden) => {
-                const nota = comentarioSinAcuse(row.comentario);
-                const equipos = equiposRecuperadosDe(nota) || resumenAcuse(row.acuse);
-                const texto = equipos || nota || (row.acuse ? "Acuse recibido" : "Sin comentario");
-                return (
-                  <div className="flex flex-col gap-1">
-                    <span>{titleCase(texto)}</span>
-                    {row.acuse?.nombreFirma ? (
-                      <span className="text-xs text-[var(--text-color-secondary)]">
-                        Recibió: {row.acuse.nombreFirma}
-                      </span>
-                    ) : null}
-                  </div>
-                );
-              }}
-            />
+            {filtro === "recuperada" ? (
+              <>
+                <Column
+                  header="Fecha acuse"
+                  style={{ width: "10%" }}
+                  body={(row: Orden) => row.acuse?.fecha || "—"}
+                />
+                <Column
+                  header="Modem/ONU"
+                  style={{ width: "9%" }}
+                  body={(row: Orden) => row.acuse?.modemOnu || "—"}
+                />
+                <Column
+                  header="Router"
+                  style={{ width: "9%" }}
+                  body={(row: Orden) => row.acuse?.router || "—"}
+                />
+                <Column
+                  header="Equipo digital"
+                  style={{ width: "9%" }}
+                  body={(row: Orden) => row.acuse?.equipoDigital || "—"}
+                />
+                <Column
+                  header="Accesorios"
+                  style={{ width: "12%" }}
+                  body={(row: Orden) => accesoriosTexto(row.acuse?.accesorios) || "—"}
+                />
+                <Column
+                  header="Recibió"
+                  style={{ width: "10%" }}
+                  body={(row: Orden) =>
+                    row.acuse?.nombreFirma ? titleCase(row.acuse.nombreFirma) : "—"
+                  }
+                />
+              </>
+            ) : (
+              <Column
+                header="Equipo / comentario"
+                style={{ width: "16%" }}
+                body={(row: Orden) => {
+                  const nota = comentarioSinAcuse(row.comentario);
+                  const equipos = equiposRecuperadosDe(nota) || resumenAcuse(row.acuse);
+                  const texto = equipos || nota || (row.acuse ? "Acuse recibido" : "Sin comentario");
+                  return (
+                    <div className="flex flex-col gap-1">
+                      <span>{titleCase(texto)}</span>
+                      {row.acuse?.nombreFirma ? (
+                        <span className="text-xs text-[var(--text-color-secondary)]">
+                          Recibió: {row.acuse.nombreFirma}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                }}
+              />
+            )}
             <Column
               header="Acciones"
               style={{ width: "16%" }}

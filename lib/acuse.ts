@@ -115,3 +115,11 @@ export function resumenAcuse(acuse: AcuseRecibido | null | undefined): string {
     .map(([nombre, qty]) => `${nombre} (${qty})`);
   return [...equipos, ...accesorios].join(", ");
 }
+
+export function accesoriosTexto(accesorios: Record<string, number> | null | undefined): string {
+  if (!accesorios) return "";
+  return Object.entries(accesorios)
+    .filter(([, qty]) => qty > 0)
+    .map(([nombre, qty]) => `${nombre} (${qty})`)
+    .join(", ");
+}

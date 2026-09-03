@@ -14,7 +14,7 @@ import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { OrdenFormModal } from "@/components/orden-form-modal";
-import { comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
+import { accesoriosTexto, comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import { downloadPlantillaExcel, parseOrdenesExcel } from "@/lib/excel-import";
 import { esOrdenRecuperada, withEquiposRecuperados, withRecupero } from "@/lib/estado-orden";
@@ -347,24 +347,33 @@ export function OrdenesDashboard() {
             />
             <Column
               header="Comentario"
-              style={{ width: "12%" }}
+              style={{ width: "10%" }}
               body={(row: Orden) => {
                 const nota = comentarioSinAcuse(row.comentario);
-                const acuse = row.acuse;
+                return nota ? titleCase(nota) : "Sin comentario";
+              }}
+            />
+            <Column
+              header="Acuse"
+              style={{ width: "16%" }}
+              body={(row: Orden) => {
+                if (!row.acuse) return "—";
                 return (
-                  <div className="flex flex-col gap-1">
-                    <span>
-                      {nota
-                        ? titleCase(nota)
-                        : acuse
-                          ? "Recuperada"
-                          : "Sin comentario"}
-                    </span>
-                    {acuse ? (
+                  <div className="flex flex-col gap-1 text-sm">
+                    {row.acuse.modemOnu ? <span>Modem/ONU: {row.acuse.modemOnu}</span> : null}
+                    {row.acuse.router ? <span>Router: {row.acuse.router}</span> : null}
+                    {row.acuse.equipoDigital ? (
+                      <span>Equipo digital: {row.acuse.equipoDigital}</span>
+                    ) : null}
+                    {accesoriosTexto(row.acuse.accesorios) ? (
+                      <span>{accesoriosTexto(row.acuse.accesorios)}</span>
+                    ) : null}
+                    {row.acuse.nombreFirma ? (
                       <span className="text-xs text-[var(--text-color-secondary)]">
-                        Acuse: {resumenAcuse(acuse) || acuse.cliente}
+                        Recibió: {titleCase(row.acuse.nombreFirma)}
                       </span>
                     ) : null}
+                    {!resumenAcuse(row.acuse) ? <span>Acuse recibido</span> : null}
                   </div>
                 );
               }}

@@ -37,6 +37,14 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
         },
       },
       {
+        label: "Acuses",
+        icon: "pi pi-file",
+        className: pathname === "/acuses" ? "ordenes-menu-active" : undefined,
+        command: () => {
+          router.push("/acuses");
+        },
+      },
+      {
         label: "Técnicos",
         icon: "pi pi-users",
         className: pathname === "/tecnicos" ? "ordenes-menu-active" : undefined,

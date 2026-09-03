@@ -78,6 +78,13 @@ export const listQuerySchema = z.object({
   order: z.enum(["asc", "desc"]).default("desc"),
 });
 
+export const acuseListQuerySchema = z.object({
+  page: numberFromQuery(1, 1),
+  limit: numberFromQuery(20, 1, 100),
+  q: emptyToUndefined(150),
+});
+
 export type OrdenCreateInput = z.infer<typeof ordenCreateSchema>;
 export type OrdenUpdateInput = z.infer<typeof ordenUpdateSchema>;
 export type ListQuery = z.infer<typeof listQuerySchema>;
+export type AcuseListQuery = z.infer<typeof acuseListQuerySchema>;

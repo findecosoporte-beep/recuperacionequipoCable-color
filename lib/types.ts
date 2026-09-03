@@ -47,6 +47,25 @@ export interface AcuseRecibido {
   nombreFirma: string;
 }
 
+export interface InfoAcuseRecibido {
+  id: string;
+  ordenId: string;
+  numeroOrden: string;
+  cliente: string;
+  contrato: string;
+  fecha: string;
+  modemOnu: string;
+  router: string;
+  equipoDigital: string;
+  accesorios: Record<string, number>;
+  nombreFirma: string;
+  ciudad: string;
+  colonia: string;
+  telefono: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Orden {
   id: string;
   orden: string;
