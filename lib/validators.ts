@@ -31,9 +31,9 @@ export const ordenCreateSchema = z.object({
     .string()
     .trim()
     .max(300, "motivoAnulacion no puede superar 300 caracteres")
-    .optional()
     .nullable()
-    .transform((value) => (value ? value : null)),
+    .transform((value) => (value ? value : null))
+    .optional(),
   tecnicoId: z
     .string()
     .trim()

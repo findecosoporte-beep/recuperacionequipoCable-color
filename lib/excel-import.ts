@@ -179,6 +179,7 @@ export async function parseOrdenesExcel(
       direccion: direccion.slice(0, 255),
       telefono: phone.slice(0, 80),
       comentario,
+      motivoAnulacion: null,
     });
   }
 
