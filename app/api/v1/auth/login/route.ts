@@ -5,6 +5,7 @@ import { signAuthToken } from "@/lib/jwt";
 import { verifyPassword } from "@/lib/password";
 import { enforceLoginEmailLimit } from "@/lib/rate-limit";
 import { loginSchema } from "@/lib/validators-auth";
+import { jwtExpiresForRole } from "@/lib/env";
 import { unauthorized } from "@/lib/errors";
 
 export const runtime = "nodejs";
@@ -32,7 +33,7 @@ export const POST = apiHandler(
     return json({
       token,
       tokenType: "Bearer",
-      expiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
+      expiresIn: jwtExpiresForRole(user.rol),
       user: publicUser(user),
     });
   },

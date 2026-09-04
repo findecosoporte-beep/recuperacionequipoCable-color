@@ -53,6 +53,8 @@ La API no evita un ataque masivo de internet (para eso haría falta Cloudflare d
 - **Login:** 8 intentos por minuto por IP (protege bcrypt) y 10 cada 15 minutos en total. Además 8 intentos cada 15 minutos **por cuenta**.
 - **Salud:** `/api/health` cachea el ping a la base 5 segundos y tiene su propio tope, para que un escaneo no tumbe Postgres.
 - **Tamaño:** JSON normal hasta 512 KB, importación masiva hasta 2 MB, Excel hasta 4 MB.
+- **Sesión:** el panel (admin/operador) dura **12 horas**. El técnico de campo dura **7 días** (para no pedir login a mitad de ruta).
+- **CORS:** en producción no se acepta `*`. Solo el dominio del panel (o `RAILWAY_PUBLIC_DOMAIN`). La app de campo no usa CORS de navegador.
 - Si se pasa el tope, responde `429` con cabecera `Retry-After`.
 
 
@@ -98,7 +100,7 @@ curl -X POST "http://localhost:3000/api/v1/ordenes" ^
 3. En el servicio de la API, Variables:
    - `DATABASE_URL` = referencia a `${{Postgres.DATABASE_URL}}`
    - `API_KEY` = una clave larga y aleatoria
-   - `ALLOWED_ORIGINS` = el dominio de tu frontend, o `*` mientras pruebas
+   - `ALLOWED_ORIGINS` = `https://tu-dominio.up.railway.app` (en producción ya no se usa `*`)
 4. Settings → Networking → **Generate Domain**.
 5. Railway detecta el `Dockerfile` y ejecuta las migraciones al arrancar.
 
@@ -110,9 +112,10 @@ Si el build falla porque no alcanza Postgres, es normal: las migraciones corren 
 | ------------------------| ------------------| ---------------------------------------------------|
 | `DATABASE_URL`         | Sí               | Cadena de PostgreSQL                              |
 | `JWT_SECRET`           | Sí en producción | Firma de los tokens de login                      |
-| `JWT_EXPIRES_IN`       | No               | Caducidad del JWT. Por defecto `7d`               |
-| `ADMIN_EMAIL`          | No               | Email del usuario inicial del seed                |
-| `ADMIN_PASSWORD`       | No               | Contraseña del usuario inicial del seed           |
-| `ALLOWED_ORIGINS`      | No               | Orígenes CORS separados por coma. Por defecto `*` |
+| `JWT_EXPIRES_IN`         | No               | Caducidad del panel (admin/operador). Por defecto `12h` |
+| `JWT_EXPIRES_IN_TECNICO` | No               | Caducidad de la app de campo. Por defecto `7d`          |
+| `ADMIN_EMAIL`            | No               | Email del usuario inicial del seed                      |
+| `ADMIN_PASSWORD`         | No               | Contraseña del usuario inicial del seed                 |
+| `ALLOWED_ORIGINS`        | No               | CORS. En producción no se permite `*`; usa el dominio del panel |
 | `RATE_LIMIT_MAX`       | No               | Tope compartido por IP y minuto. Por defecto `90` |
 | `RATE_LIMIT_WINDOW_MS` | No               | Ventana del tope compartido. Por defecto `60000`  |

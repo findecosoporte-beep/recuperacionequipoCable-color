@@ -4,7 +4,7 @@ import {
   PrismaClientKnownRequestError,
 } from "@prisma/client/runtime/library";
 import { ZodError } from "zod";
-import { getAllowedOrigins } from "@/lib/env";
+import { corsAllowOrigin, getAllowedOrigins } from "@/lib/env";
 import { ApiError, badRequest, internalError } from "@/lib/errors";
 import { assertAuth } from "@/lib/auth";
 import { enforceRateLimit, type RateLimitKind } from "@/lib/rate-limit";
@@ -22,14 +22,7 @@ interface HandlerOptions {
 }
 
 function resolveAllowedOrigin(origin: string | null): string {
-  const allowed = getAllowedOrigins();
-  if (allowed.includes("*")) {
-    return "*";
-  }
-  if (origin && allowed.includes(origin)) {
-    return origin;
-  }
-  return allowed[0] ?? "null";
+  return corsAllowOrigin(origin, getAllowedOrigins());
 }
 
 export function corsHeaders(origin: string | null): HeadersInit {

@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
-import { getJwtExpiresIn, getJwtSecret } from "@/lib/env";
+import { jwtExpiresForRole, getJwtSecret } from "@/lib/env";
 import { ApiError, unauthorized } from "@/lib/errors";
 
 export interface AuthTokenPayload extends JWTPayload {
@@ -27,7 +27,7 @@ export async function signAuthToken(user: {
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
     .setIssuedAt()
-    .setExpirationTime(getJwtExpiresIn())
+    .setExpirationTime(jwtExpiresForRole(user.rol))
     .sign(secretKey());
 }
 

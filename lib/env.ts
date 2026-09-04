@@ -23,15 +23,53 @@ export function getJwtSecret(): string {
 }
 
 export function getJwtExpiresIn(): string {
-  return optional("JWT_EXPIRES_IN", "7d");
+  return optional("JWT_EXPIRES_IN", "12h");
+}
+
+export function getJwtExpiresInTecnico(): string {
+  return optional("JWT_EXPIRES_IN_TECNICO", "7d");
+}
+
+export function jwtExpiresForRole(rol: string): string {
+  return rol === "tecnico" ? getJwtExpiresInTecnico() : getJwtExpiresIn();
 }
 
 export function getAllowedOrigins(): string[] {
-  const raw = optional("ALLOWED_ORIGINS", "*");
-  return raw
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  const configured = process.env.ALLOWED_ORIGINS?.trim();
+  const parsed = configured
+    ? configured
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+    : [];
+
+  if (!isProduction()) {
+    return parsed.length > 0 ? parsed : ["*"];
+  }
+
+  const withoutWildcard = parsed.filter((origin) => origin !== "*");
+  if (withoutWildcard.length > 0) {
+    return withoutWildcard;
+  }
+
+  const domain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim().replace(/^https?:\/\//, "");
+  if (domain) {
+    return [`https://${domain}`];
+  }
+  return [];
+}
+
+export function corsAllowOrigin(origin: string | null, allowed: string[]): string {
+  if (allowed.includes("*")) {
+    return "*";
+  }
+  if (origin && allowed.includes(origin)) {
+    return origin;
+  }
+  if (!origin) {
+    return allowed[0] ?? "null";
+  }
+  return "null";
 }
 
 export function getRateLimitMax(): number {
