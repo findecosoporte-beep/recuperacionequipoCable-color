@@ -35,8 +35,8 @@ export function getAllowedOrigins(): string[] {
 }
 
 export function getRateLimitMax(): number {
-  const parsed = Number(optional("RATE_LIMIT_MAX", "120"));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 120;
+  const parsed = Number(optional("RATE_LIMIT_MAX", "90"));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 90;
 }
 
 export function getRateLimitWindowMs(): number {

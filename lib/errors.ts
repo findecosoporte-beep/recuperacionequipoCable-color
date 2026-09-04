@@ -2,18 +2,21 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly details?: unknown;
+  readonly retryAfterSeconds?: number;
 
   constructor(
     status: number,
     code: string,
     message: string,
     details?: unknown,
+    retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.details = details;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -37,8 +40,11 @@ export function conflict(message: string, details?: unknown): ApiError {
   return new ApiError(409, "CONFLICT", message, details);
 }
 
-export function tooManyRequests(message = "Demasiadas solicitudes"): ApiError {
-  return new ApiError(429, "RATE_LIMITED", message);
+export function tooManyRequests(
+  message = "Demasiadas solicitudes",
+  retryAfterSeconds = 60,
+): ApiError {
+  return new ApiError(429, "RATE_LIMITED", message, undefined, retryAfterSeconds);
 }
 
 export function internalError(

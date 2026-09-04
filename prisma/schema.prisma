@@ -73,3 +73,12 @@ model InfoAcuseRecibido {
 
   @@map("info_acuse_recibido")
 }
+
+model RateLimitBucket {
+  key     String   @id @db.VarChar(180)
+  count   Int      @default(0)
+  resetAt DateTime @map("reset_at")
+
+  @@index([resetAt])
+  @@map("rate_limit_buckets")
+}

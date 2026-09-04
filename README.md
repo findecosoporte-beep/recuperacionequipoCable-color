@@ -44,6 +44,18 @@ Roles del panel:
 
 Si desactivas un usuario, su JWT deja de valer en la siguiente petición.
 
+## Protección contra abuso
+
+La API no evita un ataque masivo de internet (para eso haría falta Cloudflare delante), pero sí frena el abuso típico:
+
+- **Ráfaga:** 30 peticiones cada 10 segundos por IP, en memoria. Corta un bombardeo antes de llegar a Postgres.
+- **Tope compartido:** 90 peticiones por minuto por IP, guardado en Postgres. Sirve si hay varias réplicas en Railway.
+- **Login:** 8 intentos por minuto por IP (protege bcrypt) y 10 cada 15 minutos en total. Además 8 intentos cada 15 minutos **por cuenta**.
+- **Salud:** `/api/health` cachea el ping a la base 5 segundos y tiene su propio tope, para que un escaneo no tumbe Postgres.
+- **Tamaño:** JSON normal hasta 512 KB, importación masiva hasta 2 MB, Excel hasta 4 MB.
+- Si se pasa el tope, responde `429` con cabecera `Retry-After`.
+
+
 ## Endpoints
 
 | Método   | Ruta                   | Descripción                        |
@@ -102,5 +114,5 @@ Si el build falla porque no alcanza Postgres, es normal: las migraciones corren 
 | `ADMIN_EMAIL`          | No               | Email del usuario inicial del seed                |
 | `ADMIN_PASSWORD`       | No               | Contraseña del usuario inicial del seed           |
 | `ALLOWED_ORIGINS`      | No               | Orígenes CORS separados por coma. Por defecto `*` |
-| `RATE_LIMIT_MAX`       | No               | Tope de peticiones por ventana. Por defecto `120` |
-| `RATE_LIMIT_WINDOW_MS` | No               | Ventana en ms. Por defecto `60000`                |
+| `RATE_LIMIT_MAX`       | No               | Tope compartido por IP y minuto. Por defecto `90` |
+| `RATE_LIMIT_WINDOW_MS` | No               | Ventana del tope compartido. Por defecto `60000`  |

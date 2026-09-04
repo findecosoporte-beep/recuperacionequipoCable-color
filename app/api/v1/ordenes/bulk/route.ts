@@ -15,7 +15,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
   if (auth.kind === "jwt" && auth.user.rol === ROL_TECNICO) {
     throw forbidden("Los técnicos no pueden importar órdenes");
   }
-  const body = await readJson(request);
+  const body = await readJson(request, { maxBytes: 2_000_000 });
   if (!Array.isArray(body)) {
     throw badRequest("El cuerpo debe ser un arreglo de órdenes");
   }

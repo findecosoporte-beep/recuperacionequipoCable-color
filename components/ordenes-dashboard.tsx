@@ -190,6 +190,9 @@ export function OrdenesDashboard() {
     setError(null);
     setImportMessage(null);
     try {
+      if (file.size > 4 * 1024 * 1024) {
+        throw new Error("El Excel no puede superar 4 MB");
+      }
       const parsed = await parseOrdenesExcel(await file.arrayBuffer());
       let inserted = 0;
       let skipped = parsed.omitidas;

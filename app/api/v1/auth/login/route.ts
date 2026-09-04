@@ -3,6 +3,7 @@ import { publicUser } from "@/lib/auth";
 import { apiHandler, handleOptions, json, readJson } from "@/lib/http";
 import { signAuthToken } from "@/lib/jwt";
 import { verifyPassword } from "@/lib/password";
+import { enforceLoginEmailLimit } from "@/lib/rate-limit";
 import { loginSchema } from "@/lib/validators-auth";
 import { unauthorized } from "@/lib/errors";
 
@@ -12,7 +13,8 @@ export const OPTIONS = handleOptions;
 
 export const POST = apiHandler(
   async (request) => {
-    const input = loginSchema.parse(await readJson(request));
+    const input = loginSchema.parse(await readJson(request, { maxBytes: 8_192 }));
+    await enforceLoginEmailLimit(input.email);
     const user = await prisma.usuario.findUnique({
       where: { email: input.email },
     });
@@ -34,5 +36,5 @@ export const POST = apiHandler(
       user: publicUser(user),
     });
   },
-  { auth: false },
+  { auth: false, rateLimit: "login" },
 );

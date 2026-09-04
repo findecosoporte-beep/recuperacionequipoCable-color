@@ -7,7 +7,7 @@ import { ZodError } from "zod";
 import { getAllowedOrigins } from "@/lib/env";
 import { ApiError, badRequest, internalError } from "@/lib/errors";
 import { assertAuth } from "@/lib/auth";
-import { enforceRateLimit } from "@/lib/rate-limit";
+import { enforceRateLimit, type RateLimitKind } from "@/lib/rate-limit";
 
 type RouteParams = Record<string, string>;
 
@@ -18,7 +18,7 @@ type Handler = (
 
 interface HandlerOptions {
   auth?: boolean;
-  rateLimit?: boolean;
+  rateLimit?: boolean | RateLimitKind;
 }
 
 function resolveAllowedOrigin(origin: string | null): string {
@@ -52,7 +52,18 @@ export function securityHeaders(): HeadersInit {
   };
 }
 
-export async function readJson(request: NextRequest): Promise<unknown> {
+export async function readJson(
+  request: NextRequest,
+  options: { maxBytes?: number } = {},
+): Promise<unknown> {
+  const maxBytes = options.maxBytes ?? 512_000;
+  const lengthHeader = request.headers.get("content-length");
+  if (lengthHeader) {
+    const length = Number(lengthHeader);
+    if (Number.isFinite(length) && length > maxBytes) {
+      throw badRequest(`El cuerpo no puede superar ${Math.floor(maxBytes / 1024)} KB`);
+    }
+  }
   try {
     return await request.json();
   } catch {
@@ -76,6 +87,10 @@ export function json<T>(
 }
 
 export function errorResponse(error: ApiError): NextResponse {
+  const headers: Record<string, string> = {};
+  if (error.retryAfterSeconds && error.retryAfterSeconds > 0) {
+    headers["Retry-After"] = String(error.retryAfterSeconds);
+  }
   return NextResponse.json(
     {
       success: false,
@@ -85,7 +100,7 @@ export function errorResponse(error: ApiError): NextResponse {
         details: error.details ?? null,
       },
     },
-    { status: error.status },
+    { status: error.status, headers },
   );
 }
 
@@ -177,7 +192,10 @@ export function apiHandler(handler: Handler, options: HandlerOptions = {}) {
 
     try {
       if (rateLimit) {
-        enforceRateLimit(request);
+        await enforceRateLimit(
+          request,
+          rateLimit === true ? "api" : rateLimit,
+        );
       }
       if (auth) {
         await assertAuth(request);
