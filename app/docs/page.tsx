@@ -46,7 +46,7 @@ const endpoints = [
   {
     method: "DELETE",
     path: "/api/v1/ordenes/:id",
-    description: "Elimina una orden.",
+    description: "Elimina una orden. Solo administrador.",
   },
   {
     method: "POST",
@@ -62,7 +62,7 @@ const endpoints = [
   {
     method: "POST",
     path: "/api/v1/tecnicos",
-    description: "Crea un técnico recuperador (email, contraseña, zona, teléfono).",
+    description: "Crea un técnico recuperador (email, contraseña, zona, teléfono). Solo administrador.",
   },
   {
     method: "GET",
@@ -72,12 +72,12 @@ const endpoints = [
   {
     method: "PATCH",
     path: "/api/v1/tecnicos/:id",
-    description: "Actualiza datos, contraseña o activa/desactiva la cuenta.",
+    description: "Actualiza datos, contraseña o activa/desactiva la cuenta. Solo administrador.",
   },
   {
     method: "DELETE",
     path: "/api/v1/tecnicos/:id",
-    description: "Elimina un técnico recuperador.",
+    description: "Elimina un técnico recuperador. Solo administrador.",
   },
   {
     method: "GET",

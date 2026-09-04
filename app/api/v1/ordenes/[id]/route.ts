@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { assertAuth } from "@/lib/auth";
+import { assertAuth, requireAdmin } from "@/lib/auth";
 import { badRequest, forbidden } from "@/lib/errors";
 import { apiHandler, handleOptions, json, readJson } from "@/lib/http";
 import { deleteOrden, findOrden, updateOrden } from "@/lib/ordenes";
@@ -79,6 +79,7 @@ export const DELETE = apiHandler(async (request, params) => {
   if (auth.kind === "jwt" && auth.user.rol === ROL_TECNICO) {
     throw forbidden("Los técnicos no pueden eliminar órdenes");
   }
+  await requireAdmin(request);
   const orden = await deleteOrden(id);
   return json({ deleted: true, orden });
 });

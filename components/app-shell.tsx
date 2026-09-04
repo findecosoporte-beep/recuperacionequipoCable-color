@@ -6,6 +6,7 @@ import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import type { MenuItem } from "primereact/menuitem";
 import { useAuth } from "@/components/auth-provider";
+import { etiquetaRol } from "@/lib/roles";
 
 interface AppShellProps {
   title: string;
@@ -82,6 +83,7 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
             {user ? (
               <>
                 <p className="ordenes-sidebar-user">{user.nombre}</p>
+                <p className="m-0 mb-2 text-xs opacity-80">{etiquetaRol(user.rol)}</p>
                 <Button
                   type="button"
                   label="Salir"

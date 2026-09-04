@@ -10,7 +10,7 @@ import { InputText } from "primereact/inputtext";
 import { Message } from "primereact/message";
 import { Tag } from "primereact/tag";
 import { useAuth } from "@/components/auth-provider";
-import { esRolPanel } from "@/lib/roles";
+import { esAdmin, esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { OrdenFormModal } from "@/components/orden-form-modal";
@@ -103,6 +103,8 @@ export function OrdenesDashboard() {
       </div>
     );
   }
+
+  const puedeBorrar = esAdmin(user.rol);
 
   function openCreate() {
     setEditing(null);
@@ -399,14 +401,16 @@ export function OrdenesDashboard() {
                     text
                     onClick={() => openEdit(row)}
                   />
-                  <Button
-                    type="button"
-                    label="Borrar"
-                    size="small"
-                    text
-                    severity="danger"
-                    onClick={() => removeOrden(row)}
-                  />
+                  {puedeBorrar ? (
+                    <Button
+                      type="button"
+                      label="Borrar"
+                      size="small"
+                      text
+                      severity="danger"
+                      onClick={() => removeOrden(row)}
+                    />
+                  ) : null}
                 </div>
               )}
             />

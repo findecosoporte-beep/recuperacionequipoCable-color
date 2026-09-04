@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { getApiKey, isProduction } from "@/lib/env";
 import { forbidden, unauthorized } from "@/lib/errors";
-import { esRolPanel } from "@/lib/roles";
+import { esAdmin, esRolPanel, usuarioSesionValida } from "@/lib/roles";
 import { looksLikeJwt, verifyAuthToken, type AuthTokenPayload } from "@/lib/jwt";
 
 export type AuthContext =
@@ -47,13 +47,37 @@ export function publicUser(user: {
   };
 }
 
-export async function assertAuth(request: NextRequest): Promise<AuthContext> {
+const authPorRequest = new WeakMap<NextRequest, Promise<AuthContext>>();
+
+async function resolverAuth(request: NextRequest): Promise<AuthContext> {
   const bearer = extractBearer(request);
   const headerKey = request.headers.get("x-api-key")?.trim() ?? null;
 
   if (bearer && looksLikeJwt(bearer)) {
     const payload = await verifyAuthToken(bearer);
-    return { kind: "jwt", user: payload };
+    const user = await prisma.usuario.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        rol: true,
+        activo: true,
+      },
+    });
+    if (!usuarioSesionValida(user) || !user) {
+      throw unauthorized("Usuario inactivo o no encontrado");
+    }
+    return {
+      kind: "jwt",
+      user: {
+        ...payload,
+        sub: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        rol: user.rol,
+      },
+    };
   }
 
   const expected = getApiKey();
@@ -70,6 +94,15 @@ export async function assertAuth(request: NextRequest): Promise<AuthContext> {
   throw unauthorized("Credenciales inválidas o sesión expirada");
 }
 
+export function assertAuth(request: NextRequest): Promise<AuthContext> {
+  let pending = authPorRequest.get(request);
+  if (!pending) {
+    pending = resolverAuth(request);
+    authPorRequest.set(request, pending);
+  }
+  return pending;
+}
+
 export async function requirePanelAccess(request: NextRequest) {
   const auth = await assertAuth(request);
   if (auth.kind === "api_key") {
@@ -77,6 +110,17 @@ export async function requirePanelAccess(request: NextRequest) {
   }
   if (!esRolPanel(auth.user.rol)) {
     throw forbidden("Esta cuenta es de técnico recuperador. Usa la app de campo.");
+  }
+  return auth;
+}
+
+export async function requireAdmin(request: NextRequest) {
+  const auth = await assertAuth(request);
+  if (auth.kind === "api_key") {
+    return auth;
+  }
+  if (!esAdmin(auth.user.rol)) {
+    throw forbidden("Solo el administrador puede hacer esta acción");
   }
   return auth;
 }
@@ -100,7 +144,7 @@ export async function requireSessionUser(request: NextRequest) {
     },
   });
 
-  if (!user || !user.activo) {
+  if (!usuarioSesionValida(user) || !user) {
     throw unauthorized("Usuario inactivo o no encontrado");
   }
 

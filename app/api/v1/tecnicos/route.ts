@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requirePanelAccess } from "@/lib/auth";
+import { requireAdmin, requirePanelAccess } from "@/lib/auth";
 import { apiHandler, handleOptions, json, readJson } from "@/lib/http";
 import { createTecnico, listTecnicos } from "@/lib/tecnicos";
 import {
@@ -21,7 +21,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
 });
 
 export const POST = apiHandler(async (request: NextRequest) => {
-  await requirePanelAccess(request);
+  await requireAdmin(request);
   const input = tecnicoCreateSchema.parse(await readJson(request));
   const tecnico = await createTecnico(input);
   return json(tecnico, 201);

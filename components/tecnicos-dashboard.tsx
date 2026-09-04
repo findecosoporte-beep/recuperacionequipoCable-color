@@ -14,7 +14,7 @@ import { AppShell } from "@/components/app-shell";
 import { TecnicoFormModal } from "@/components/tecnico-form-modal";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import { formatTelefono, titleCase, visiblePages } from "@/lib/format-orden";
-import { esRolPanel, etiquetaRol } from "@/lib/roles";
+import { esAdmin, esRolPanel, etiquetaRol } from "@/lib/roles";
 import type { Tecnico, TecnicoPayload } from "@/lib/types";
 
 interface ListMeta {
@@ -92,6 +92,8 @@ export function TecnicosDashboard() {
       </div>
     );
   }
+
+  const puedeGestionar = esAdmin(user.rol);
 
   function openCreate() {
     setEditing(null);
@@ -194,7 +196,9 @@ export function TecnicosDashboard() {
           />
           <div className="flex flex-wrap gap-2">
             <Button type="submit" label="Buscar" icon="pi pi-search" outlined />
-            <Button type="button" label="Nuevo técnico" icon="pi pi-plus" onClick={openCreate} />
+            {puedeGestionar ? (
+              <Button type="button" label="Nuevo técnico" icon="pi pi-plus" onClick={openCreate} />
+            ) : null}
           </div>
         </form>
 
@@ -268,7 +272,8 @@ export function TecnicosDashboard() {
             <Column
               header="Acciones"
               style={{ width: "16%" }}
-              body={(row: Tecnico) => (
+              body={(row: Tecnico) =>
+                puedeGestionar ? (
                 <div className="flex flex-wrap gap-1">
                   <Button
                     type="button"
@@ -293,7 +298,10 @@ export function TecnicosDashboard() {
                     onClick={() => removeTecnico(row)}
                   />
                 </div>
-              )}
+                ) : (
+                  "—"
+                )
+              }
             />
           </DataTable>
           <div className="mt-3 flex flex-col gap-3 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">

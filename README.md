@@ -37,6 +37,13 @@ Usuario inicial (tras `npm run db:seed`): `admin@ordenes.local` / `Admin123!`
 
 Los **técnicos recuperadores** se dan de alta en el panel (`/tecnicos`). Usan el mismo login de la API para la app de campo; no entran al panel web. En **Asignación** (`/asignacion`) se les pasan las órdenes por ciudad.
 
+Roles del panel:
+
+- **Administrador:** crear/editar/borrar técnicos, borrar órdenes, y el resto del panel.
+- **Operador:** órdenes, estado, acuses y asignación. No puede gestionar técnicos ni borrar órdenes.
+
+Si desactivas un usuario, su JWT deja de valer en la siguiente petición.
+
 ## Endpoints
 
 | Método   | Ruta                   | Descripción                        |

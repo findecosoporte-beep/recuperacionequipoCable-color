@@ -100,18 +100,22 @@ export async function resumenAsignacion(query: AsignacionQuery) {
   };
 }
 
+export function whereAsignarCiudad(ciudad: string, modo: "libres" | "todas") {
+  const whereCiudad = { ciudad: ciudadEquals(ciudad) };
+  if (modo === "libres") {
+    return { AND: [whereCiudad, pendientesAsignacion(), { tecnicoId: null }] };
+  }
+  return { AND: [whereCiudad, pendientesAsignacion()] };
+}
+
 export async function asignarCiudad(input: AsignarCiudadInput) {
   const tecnico = await findTecnico(input.tecnicoId);
   if (!tecnico.activo) {
     throw badRequest("El técnico está inactivo");
   }
 
-  const whereCiudad = { ciudad: ciudadEquals(input.ciudad) };
   const result = await prisma.orden.updateMany({
-    where:
-      input.modo === "libres"
-        ? { AND: [whereCiudad, pendientesAsignacion(), { tecnicoId: null }] }
-        : { AND: [whereCiudad, pendientesAsignacion()] },
+    where: whereAsignarCiudad(input.ciudad, input.modo),
     data: { tecnicoId: tecnico.id },
   });
 
