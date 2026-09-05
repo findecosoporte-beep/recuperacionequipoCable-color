@@ -10,7 +10,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/acuse.test.ts lib/roles.test.ts lib/estado-orden.test.ts lib/asignaciones.test.ts lib/rate-limit-policy.test.ts lib/env.test.ts lib/whatsapp.test.ts",
+    "test": "tsx --test lib/acuse.test.ts lib/roles.test.ts lib/estado-orden.test.ts lib/asignaciones.test.ts lib/rate-limit-policy.test.ts lib/env.test.ts lib/whatsapp.test.ts lib/format-orden.test.ts",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",

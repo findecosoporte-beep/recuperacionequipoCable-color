@@ -29,15 +29,24 @@ export function formatOrdenNumero(orden: string): string {
   return value;
 }
 
-export function formatTelefono(telefono: string): string {
-  const digits = telefono.replace(/\D/g, "");
-  if (!digits) return telefono.trim() || "—";
+const SEPARADOR_TELEFONOS = /(?:\s*[/,;|]\s*|\s+y\s+)/i;
 
-  const numeros = splitPhones(digits);
+export function formatTelefono(telefono: string): string {
+  const numeros = telefonosDigitos(telefono);
+  if (numeros.length === 0) return telefono.trim() || "—";
   return numeros.map(prettyPhone).join("  /  ");
 }
 
 export function telefonosDigitos(telefono: string): string[] {
+  const partes = telefono
+    .split(SEPARADOR_TELEFONOS)
+    .map((parte) => parte.replace(/\D/g, ""))
+    .filter(Boolean);
+
+  if (partes.length > 1) {
+    return partes.flatMap((parte) => splitPhones(parte));
+  }
+
   const digits = telefono.replace(/\D/g, "");
   if (!digits) return [];
   return splitPhones(digits);
@@ -58,17 +67,22 @@ function splitPhones(digits: string): string[] {
   }
   if (digits.length === 16) return [digits.slice(0, 8), digits.slice(8)];
   if (digits.startsWith("504") && digits.length >= 19) {
-    return [digits.slice(0, 11), digits.slice(11)].filter((item) => item.length >= 8);
+    return [digits.slice(0, 11), digits.slice(11)].filter(Boolean);
   }
   return [digits];
 }
 
+function prettyLocal(local: string): string {
+  if (local.length <= 4) return local;
+  return `${local.slice(0, 4)}-${local.slice(4)}`;
+}
+
 function prettyPhone(digits: string): string {
-  if (digits.startsWith("504") && digits.length >= 11) {
-    return `+504 ${digits.slice(3, 7)}-${digits.slice(7)}`;
+  if (digits.startsWith("504") && digits.length >= 7) {
+    return `+504 ${prettyLocal(digits.slice(3))}`;
   }
   if (digits.length === 8) {
-    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    return `+504 ${prettyLocal(digits)}`;
   }
   if (digits.length === 10) {
     return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
