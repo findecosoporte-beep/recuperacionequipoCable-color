@@ -38,6 +38,14 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
         },
       },
       {
+        label: "Reportes",
+        icon: "pi pi-chart-bar",
+        className: pathname === "/reportes" ? "ordenes-menu-active" : undefined,
+        command: () => {
+          router.push("/reportes");
+        },
+      },
+      {
         label: "Acuses",
         icon: "pi pi-file",
         className: pathname === "/acuses" ? "ordenes-menu-active" : undefined,

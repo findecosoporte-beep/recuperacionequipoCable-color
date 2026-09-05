@@ -112,6 +112,12 @@ const endpoints = [
     path: "/api/v1/acuses/enlace",
     description: "Crea el enlace público del acuse para enviarlo por WhatsApp. Body: ordenId.",
   },
+  {
+    method: "GET",
+    path: "/api/v1/reportes",
+    description:
+      "Reporte de recuperadas o por anular. Query: tipo (recuperadas | por_anular), desde, hasta, ciudad, q.",
+  },
 ];
 
 const fields = [

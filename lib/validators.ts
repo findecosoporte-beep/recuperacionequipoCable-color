@@ -112,4 +112,14 @@ export const acuseEnlaceSchema = z.object({
   ordenId: z.string().trim().min(1).max(40),
 });
 
+export const reporteQuerySchema = z.object({
+  tipo: z.enum(["recuperadas", "por_anular"]).default("recuperadas"),
+  desde: emptyToUndefined(10),
+  hasta: emptyToUndefined(10),
+  ciudad: emptyToUndefined(100),
+  q: emptyToUndefined(150),
+});
+
+export type ReporteQuery = z.infer<typeof reporteQuerySchema>;
+
 export type AcuseListQuery = z.infer<typeof acuseListQuerySchema>;
