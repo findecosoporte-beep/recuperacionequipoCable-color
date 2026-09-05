@@ -7,7 +7,6 @@ import {
   numerosWhatsAppDe,
   telefonoWhatsApp1,
   urlWhatsApp,
-  urlWhatsAppDifusion,
 } from "./whatsapp";
 import type { Orden } from "./types";
 
@@ -53,7 +52,7 @@ describe("whatsapp", () => {
     assert.equal(destinos[0]?.wa, "50492763326");
   });
 
-  it("arma el enlace de un solo mensaje para todos", () => {
+  it("arma el enlace de WhatsApp con el mensaje personalizado", () => {
     const texto = mensajeWhatsApp("Hola {nombre}, orden {orden} en {ciudad}", {
       wa: "50499887766",
       nombre: "Ana Ruiz",
@@ -63,9 +62,5 @@ describe("whatsapp", () => {
     });
     assert.equal(texto, "Hola Ana Ruiz, orden 1001 en Tegucigalpa");
     assert.ok(urlWhatsApp("50499887766", texto).startsWith("https://wa.me/50499887766?text="));
-    assert.equal(
-      urlWhatsAppDifusion("Aviso Cable Color"),
-      `https://wa.me/?text=${encodeURIComponent("Aviso Cable Color")}`,
-    );
   });
 });

@@ -3,7 +3,7 @@ import { parseNombreCliente } from "@/lib/nombre-cliente";
 import type { Orden } from "@/lib/types";
 
 export const MENSAJE_POR_RECUPERAR =
-  "Le escribimos de Cable Color. Tenemos pendiente la recuperación de equipo de su servicio. Un técnico pasará a recogerlo. Si ya lo entregó o tiene dudas, responda este mensaje. Gracias.";
+  "Hola {nombre}, le escribimos de Cable Color. Tenemos pendiente la recuperación de equipo de su servicio (orden {orden}) en {colonia}, {ciudad}. Un técnico pasará a recogerlo. Si ya lo entregó o tiene dudas, responda este mensaje. Gracias.";
 
 export interface DestinoWhatsApp {
   wa: string;
@@ -80,8 +80,4 @@ export function mensajeWhatsApp(plantilla: string, destino: DestinoWhatsApp): st
 
 export function urlWhatsApp(wa: string, texto: string): string {
   return `https://wa.me/${wa}?text=${encodeURIComponent(texto)}`;
-}
-
-export function urlWhatsAppDifusion(texto: string): string {
-  return `https://wa.me/?text=${encodeURIComponent(texto)}`;
 }

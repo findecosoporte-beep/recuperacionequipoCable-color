@@ -352,12 +352,12 @@ export function EstadoDashboard() {
             <div>
               <p className="m-0 font-semibold">Aviso por WhatsApp</p>
               <p className="mt-1 mb-0 text-sm text-[var(--text-color-secondary)]">
-                Un solo mensaje para todos, al Teléfono 1 de cada cliente.
+                Mensaje personalizado al Teléfono 1 de cada cliente, uno por uno.
               </p>
             </div>
             <Button
               type="button"
-              label="Enviar un mensaje a todos"
+              label="Enviar WhatsApp a por recuperar"
               icon="pi pi-whatsapp"
               severity="success"
               onClick={() => setWhatsappAbierto(true)}
