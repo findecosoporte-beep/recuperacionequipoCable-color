@@ -5,12 +5,15 @@ import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Message } from "primereact/message";
+import { confirmDialog } from "primereact/confirmdialog";
 import { WhatsAppEmpresaSelector } from "@/components/whatsapp-empresa-selector";
 import { apiRequestWithMeta } from "@/lib/api-client";
+import { formatHora } from "@/lib/fecha";
 import { formatOrdenNumero, formatTelefono } from "@/lib/format-orden";
 import type { Orden } from "@/lib/types";
 import { useEmpresaWhatsApp } from "@/lib/whatsapp-empresa";
 import { registrarEnvioWhatsApp } from "@/lib/whatsapp-envio";
+import { recordarAvisoHoy, useAvisosWhatsAppHoy } from "@/lib/whatsapp-hoy-client";
 import {
   destinosWhatsApp,
   mensajeWhatsApp,
@@ -31,6 +34,7 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
   const [error, setError] = useState<string | null>(null);
   const [sinTelefono, setSinTelefono] = useState(0);
   const { empresa } = useEmpresaWhatsApp();
+  const { avisoDe } = useAvisosWhatsAppHoy();
   const [destinos, setDestinos] = useState<DestinoWhatsApp[]>([]);
   const [plantilla, setPlantilla] = useState(() => plantillaPorEmpresa(empresa));
   const [indice, setIndice] = useState(0);
@@ -92,19 +96,51 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
     () => (actual ? mensajeWhatsApp(plantilla, actual) : plantilla),
     [actual, plantilla],
   );
+  const avisoHoy = actual
+    ? avisoDe({ ordenId: actual.ordenId, telefono: actual.wa })
+    : undefined;
 
-  function abrirWhatsApp() {
+  function enviarWhatsApp() {
     if (!actual) return;
     window.open(urlWhatsApp(actual.wa, preview), "_blank", "noopener,noreferrer");
     setEnviados((prev) => (prev.includes(actual.wa) ? prev : [...prev, actual.wa]));
+    recordarAvisoHoy({
+      ordenId: actual.ordenId,
+      telefono: actual.wa,
+      numeroOrden: actual.ordenes[0],
+      cliente: actual.nombre,
+    });
     void registrarEnvioWhatsApp(actual.ordenId, empresa);
   }
 
-  function abrirYSeguir() {
-    abrirWhatsApp();
-    if (indice < destinos.length - 1) {
-      setIndice(indice + 1);
+  function confirmarSiYaSeEnvioHoy(despues: () => void) {
+    if (!avisoHoy) {
+      despues();
+      return;
     }
+    confirmDialog({
+      header: "Mensaje enviado hoy",
+      icon: "pi pi-exclamation-triangle",
+      message: `Ya se envió mensaje el día de hoy a este cliente${
+        avisoHoy.createdAt ? ` (${formatHora(avisoHoy.createdAt)})` : ""
+      }. ¿Quieres abrir WhatsApp de nuevo?`,
+      acceptLabel: "Abrir de nuevo",
+      rejectLabel: "Cancelar",
+      accept: despues,
+    });
+  }
+
+  function abrirWhatsApp() {
+    confirmarSiYaSeEnvioHoy(enviarWhatsApp);
+  }
+
+  function abrirYSeguir() {
+    confirmarSiYaSeEnvioHoy(() => {
+      enviarWhatsApp();
+      if (indice < destinos.length - 1) {
+        setIndice(indice + 1);
+      }
+    });
   }
 
   return (
@@ -170,6 +206,15 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
               {actual.ordenes.map((item) => formatOrdenNumero(item)).join(", ")}
             </p>
             <p className="mt-2 mb-0 text-sm text-[var(--text-color-secondary)]">{preview}</p>
+            {avisoHoy ? (
+              <Message
+                className="mt-3"
+                severity="warn"
+                text={`Ya se envió mensaje el día de hoy${
+                  avisoHoy.createdAt ? ` (${formatHora(avisoHoy.createdAt)})` : ""
+                }.`}
+              />
+            ) : null}
           </div>
         ) : null}
 
