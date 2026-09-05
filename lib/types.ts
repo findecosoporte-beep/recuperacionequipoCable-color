@@ -149,6 +149,19 @@ export interface ApiSuccess<T> {
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiErrorBody;
 
+export interface SolicitudAnulacion {
+  id: string;
+  ordenId: string | null;
+  numeroOrden: string;
+  cliente: string;
+  ciudad: string;
+  colonia: string;
+  telefono: string;
+  motivo: string;
+  solicitadoPor: string;
+  createdAt: string;
+}
+
 export interface AvisoWhatsApp {
   id: string;
   ordenId: string | null;

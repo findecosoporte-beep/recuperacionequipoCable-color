@@ -24,6 +24,7 @@ model Orden {
   recuperadoPor   Usuario?  @relation("OrdenesRecuperadas", fields: [recuperadoPorId], references: [id], onDelete: SetNull)
   acuse           InfoAcuseRecibido?
   avisosWhatsapp  AvisoWhatsApp[]
+  solicitudesAnulacion SolicitudAnulacion[]
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -50,6 +51,7 @@ model Usuario {
   ordenes        Orden[]  @relation("OrdenesAsignadas")
   recuperaciones Orden[]  @relation("OrdenesRecuperadas")
   avisosWhatsapp AvisoWhatsApp[]
+  solicitudesAnulacion SolicitudAnulacion[]
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -92,6 +94,26 @@ model AvisoWhatsApp {
   @@index([ordenId])
   @@index([enviadoPorId])
   @@map("avisos_whatsapp")
+}
+
+model SolicitudAnulacion {
+  id              String   @id @default(cuid())
+  ordenId         String?  @map("orden_id")
+  orden           Orden?   @relation(fields: [ordenId], references: [id], onDelete: SetNull)
+  numeroOrden     String   @map("numero_orden")
+  cliente         String
+  ciudad          String
+  colonia         String
+  telefono        String
+  motivo          String   @db.Text
+  solicitadoPorId String?  @map("solicitado_por_id")
+  solicitadoPor   Usuario? @relation(fields: [solicitadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([ordenId])
+  @@index([solicitadoPorId])
+  @@map("solicitudes_anulacion")
 }
 
 model RateLimitBucket {

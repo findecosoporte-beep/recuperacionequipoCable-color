@@ -107,6 +107,12 @@ const endpoints = [
     description: "Control semanal de WhatsApp enviados. Query: desde, hasta (YYYY-MM-DD).",
   },
   {
+    method: "GET",
+    path: "/api/v1/solicitudes-anulacion",
+    description:
+      "Control por día de órdenes mandadas a anular desde la app. Query: desde, hasta (YYYY-MM-DD).",
+  },
+  {
     method: "POST",
     path: "/api/v1/avisos-whatsapp",
     description:

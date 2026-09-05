@@ -4,6 +4,7 @@ import { badRequest, forbidden } from "@/lib/errors";
 import { apiHandler, handleOptions, json, readJson } from "@/lib/http";
 import { deleteOrden, findOrden, updateOrden } from "@/lib/ordenes";
 import { ROL_TECNICO } from "@/lib/roles";
+import { registrarSolicitudAnulacion } from "@/lib/solicitudes-anulacion";
 import { ordenUpdateSchema } from "@/lib/validators";
 
 export const runtime = "nodejs";
@@ -37,7 +38,7 @@ export const PATCH = apiHandler(async (request: NextRequest, params) => {
   if (!id) {
     throw badRequest("Falta el identificador de la orden");
   }
-  const { auth } = await ordenParaTecnico(request, id);
+  const { auth, orden } = await ordenParaTecnico(request, id);
   const body = await readJson(request);
   const input = ordenUpdateSchema.parse(body);
   if (auth.kind === "jwt" && auth.user.rol === ROL_TECNICO) {
@@ -62,10 +63,26 @@ export const PATCH = apiHandler(async (request: NextRequest, params) => {
     ) {
       throw forbidden("Solo puedes actualizar el comentario, el estado o el motivo de anulación");
     }
-    return json(await updateOrden(id, permitido, auth.kind === "jwt" ? auth.user.sub : null));
+    const actualizada = await updateOrden(id, permitido, auth.user.sub);
+    if (
+      permitido.estadoAnulacion === "por_anular" &&
+      orden.estadoAnulacion !== "por_anular"
+    ) {
+      await registrarSolicitudAnulacion({
+        ordenId: actualizada.id,
+        numeroOrden: actualizada.orden,
+        cliente: actualizada.cliente,
+        ciudad: actualizada.ciudad,
+        colonia: actualizada.colonia,
+        telefono: actualizada.telefono,
+        motivo: actualizada.motivoAnulacion,
+        solicitadoPorId: auth.user.sub,
+      });
+    }
+    return json(actualizada);
   }
-  const orden = await updateOrden(id, input, auth.kind === "jwt" ? auth.user.sub : null);
-  return json(orden);
+  const actualizada = await updateOrden(id, input, auth.kind === "jwt" ? auth.user.sub : null);
+  return json(actualizada);
 });
 
 export const PUT = PATCH;

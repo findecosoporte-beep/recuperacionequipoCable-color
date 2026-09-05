@@ -21,6 +21,7 @@ import { WhatsAppOrdenButton } from "@/components/whatsapp-orden-button";
 import { WhatsAppPorRecuperarDialog } from "@/components/whatsapp-por-recuperar-dialog";
 import { WhatsAppPorSemana } from "@/components/whatsapp-por-semana";
 import { RecuperadasPorSemana } from "@/components/recuperadas-por-semana";
+import { AnulacionesPorDia } from "@/components/anulaciones-por-dia";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import {
   estadoOrden,
@@ -179,6 +180,7 @@ export function EstadoDashboard() {
       return;
     }
     if (panel === "whatsapp") return;
+    if (filtro === "por_anular" && vista === "semana") return;
     void load(1, query, meta.limit, filtro);
     if (tecnicos.length === 0) {
       void apiRequestWithMeta<Tecnico[]>("/api/v1/tecnicos?limit=100&activo=true")
@@ -435,6 +437,25 @@ export function EstadoDashboard() {
           </div>
         ) : null}
 
+        {panel === "ordenes" && filtro === "por_anular" ? (
+          <div className="col-span-4 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              label="Lista"
+              icon="pi pi-list"
+              outlined={vista !== "lista"}
+              onClick={() => setVista("lista")}
+            />
+            <Button
+              type="button"
+              label="Por día (app)"
+              icon="pi pi-calendar"
+              outlined={vista !== "semana"}
+              onClick={() => setVista("semana")}
+            />
+          </div>
+        ) : null}
+
         {panel === "ordenes" && filtro === "por_recuperar" ? (
           <div className="col-span-4 flex flex-col gap-3 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -465,6 +486,13 @@ export function EstadoDashboard() {
         <div className="col-span-4">
           {panel === "whatsapp" ? (
             <WhatsAppPorSemana
+              semanaInicio={semanaInicio}
+              onPrev={() => setSemanaInicio(sumarDiasYmd(semanaInicio, -7))}
+              onNext={() => setSemanaInicio(sumarDiasYmd(semanaInicio, 7))}
+              onHoy={() => setSemanaInicio(inicioSemanaYmd(ymdEnZona()))}
+            />
+          ) : filtro === "por_anular" && vista === "semana" ? (
+            <AnulacionesPorDia
               semanaInicio={semanaInicio}
               onPrev={() => setSemanaInicio(sumarDiasYmd(semanaInicio, -7))}
               onNext={() => setSemanaInicio(sumarDiasYmd(semanaInicio, 7))}
