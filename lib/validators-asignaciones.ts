@@ -41,5 +41,20 @@ export const liberarCiudadSchema = z.object({
 });
 
 export type AsignacionQuery = z.infer<typeof asignacionQuerySchema>;
+export const asignarOrdenSchema = z.object({
+  ordenId: z
+    .string({ error: "ordenId es obligatorio" })
+    .trim()
+    .min(1, "ordenId es obligatorio")
+    .max(40),
+  tecnicoId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .nullable(),
+});
+
 export type AsignarCiudadInput = z.infer<typeof asignarCiudadSchema>;
 export type LiberarCiudadInput = z.infer<typeof liberarCiudadSchema>;
+export type AsignarOrdenInput = z.infer<typeof asignarOrdenSchema>;

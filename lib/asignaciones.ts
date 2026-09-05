@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { ApiError, badRequest } from "@/lib/errors";
-import { noAnuladaWhere, noRecuperadaWhere } from "@/lib/ordenes";
+import { esOrdenRecuperada } from "@/lib/estado-orden";
+import { findOrden, noAnuladaWhere, noRecuperadaWhere } from "@/lib/ordenes";
 import { findTecnico } from "@/lib/tecnicos";
 import type {
   AsignacionQuery,
@@ -124,6 +125,50 @@ export async function asignarCiudad(input: AsignarCiudadInput) {
     ciudad: input.ciudad,
     tecnicoId: tecnico.id,
     modo: input.modo,
+  };
+}
+
+export function motivoNoAsignable(orden: {
+  comentario?: string | null;
+  acuse?: unknown | null;
+  estadoAnulacion?: string | null;
+}): string | null {
+  if (orden.estadoAnulacion === "anulada") {
+    return "No se puede asignar una orden anulada";
+  }
+  if (esOrdenRecuperada(orden.comentario, orden.acuse)) {
+    return "No se puede reasignar una orden recuperada";
+  }
+  return null;
+}
+
+export async function asignarOrden(input: { ordenId: string; tecnicoId: string | null }) {
+  const orden = await findOrden(input.ordenId);
+  const bloqueo = motivoNoAsignable(orden);
+  if (bloqueo) throw badRequest(bloqueo);
+
+  let tecnicoId: string | null = null;
+  if (input.tecnicoId) {
+    const tecnico = await findTecnico(input.tecnicoId);
+    if (!tecnico.activo) {
+      throw badRequest("El técnico está inactivo");
+    }
+    tecnicoId = tecnico.id;
+  }
+
+  const actualizada = await prisma.orden.update({
+    where: { id: orden.id },
+    data: { tecnicoId },
+    include: {
+      tecnico: { select: { id: true, nombre: true, email: true, activo: true } },
+    },
+  });
+
+  return {
+    id: actualizada.id,
+    orden: actualizada.orden,
+    tecnicoId: actualizada.tecnicoId,
+    tecnico: actualizada.tecnico,
   };
 }
 

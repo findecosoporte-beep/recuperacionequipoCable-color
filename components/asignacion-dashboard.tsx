@@ -12,10 +12,19 @@ import { Message } from "primereact/message";
 import { Tag } from "primereact/tag";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
+import { AsignarOrdenDialog, guardarAsignacionOrden } from "@/components/asignar-orden-dialog";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
-import { titleCase } from "@/lib/format-orden";
+import { formatOrdenNumero, titleCase, visiblePages } from "@/lib/format-orden";
+import { parseNombreCliente } from "@/lib/nombre-cliente";
 import { esRolPanel } from "@/lib/roles";
-import type { CiudadAsignacion, ResumenAsignacion, Tecnico } from "@/lib/types";
+import type { CiudadAsignacion, Orden, ResumenAsignacion, Tecnico } from "@/lib/types";
+
+interface ListMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
 
 export function AsignacionDashboard() {
   const router = useRouter();
@@ -23,11 +32,20 @@ export function AsignacionDashboard() {
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [tecnicoId, setTecnicoId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [vista, setVista] = useState<"ciudad" | "orden">("ciudad");
   const [resumen, setResumen] = useState<ResumenAsignacion | null>(null);
+  const [ordenes, setOrdenes] = useState<Orden[]>([]);
+  const [meta, setMeta] = useState<ListMeta>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [asignarOrden, setAsignarOrden] = useState<Orden | null>(null);
 
   const loadTecnicos = useCallback(async () => {
     const result = await apiRequestWithMeta<Tecnico[]>(
@@ -56,6 +74,29 @@ export function AsignacionDashboard() {
     [query, tecnicoId],
   );
 
+  const loadOrdenes = useCallback(
+    async (page = 1, search = query, pageSize = meta.limit) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(pageSize),
+          estado: "por_recuperar",
+        });
+        if (search.trim()) params.set("q", search.trim());
+        const result = await apiRequestWithMeta<Orden[]>(`/api/v1/ordenes?${params.toString()}`);
+        setOrdenes(result.data);
+        if (result.meta) setMeta(result.meta);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudieron cargar las órdenes");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [meta.limit, query],
+  );
+
   useEffect(() => {
     if (!ready) return;
     if (!user) {
@@ -74,9 +115,13 @@ export function AsignacionDashboard() {
 
   useEffect(() => {
     if (!ready || !user || !esRolPanel(user.rol)) return;
-    void load();
+    if (vista === "ciudad") {
+      void load();
+      return;
+    }
+    void loadOrdenes(1, query);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, tecnicoId]);
+  }, [ready, user, tecnicoId, vista]);
 
   if (!ready || !user || !esRolPanel(user.rol)) {
     return (
@@ -151,6 +196,29 @@ export function AsignacionDashboard() {
     });
   }
 
+  async function asignarUnaOrden(siguienteTecnicoId: string | null) {
+    if (!asignarOrden) return;
+    setSaving(true);
+    setError(null);
+    setOk(null);
+    try {
+      const result = await guardarAsignacionOrden(asignarOrden.id, siguienteTecnicoId);
+      const nombre = result.tecnico?.nombre;
+      setOk(
+        nombre
+          ? `La orden ${formatOrdenNumero(result.orden)} quedó asignada a ${nombre}.`
+          : `La orden ${formatOrdenNumero(result.orden)} quedó sin técnico.`,
+      );
+      setAsignarOrden(null);
+      await loadOrdenes(meta.page, query);
+      if (tecnicoId) await load(tecnicoId, query);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo asignar la orden");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function confirmarLiberar(ciudad: CiudadAsignacion) {
     if (!tecnico) return;
     confirmDialog({
@@ -167,41 +235,85 @@ export function AsignacionDashboard() {
   }
 
   return (
-    <AppShell title="Asignar por ciudad" subtitle="Técnicos recuperadores">
+    <AppShell title="Asignación" subtitle="Por ciudad o por orden">
       <ConfirmDialog />
+      <AsignarOrdenDialog
+        orden={asignarOrden}
+        tecnicos={tecnicos}
+        saving={saving}
+        defaultTecnicoId={tecnicoId}
+        onClose={() => setAsignarOrden(null)}
+        onConfirm={(siguienteTecnicoId) => {
+          void asignarUnaOrden(siguienteTecnicoId);
+        }}
+      />
 
       <main className="mx-auto grid w-full flex-1 grid-cols-4 gap-4 px-4 py-6 sm:px-6">
+        <div className="col-span-4 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            label="Por ciudad"
+            icon="pi pi-map-marker"
+            outlined={vista !== "ciudad"}
+            onClick={() => {
+              setQuery("");
+              setVista("ciudad");
+            }}
+          />
+          <Button
+            type="button"
+            label="Por orden"
+            icon="pi pi-list"
+            outlined={vista !== "orden"}
+            onClick={() => {
+              setQuery("");
+              setVista("orden");
+            }}
+          />
+        </div>
+
         <form
           className="col-span-4 flex flex-col gap-3 lg:flex-row lg:items-center"
           onSubmit={(event) => {
             event.preventDefault();
+            if (vista === "orden") {
+              void loadOrdenes(1, query);
+              return;
+            }
             void load(tecnicoId, query);
           }}
         >
-          <Dropdown
-            value={tecnicoId}
-            options={tecnicos.map((item) => ({
-              label: item.zona
-                ? `${item.nombre} · ${item.zona}`
-                : item.nombre,
-              value: item.id,
-            }))}
-            placeholder="Elige un técnico"
-            className="w-full lg:max-w-sm"
-            showClear
-            onChange={(event) => setTecnicoId(event.value ?? null)}
-          />
+          {vista === "ciudad" ? (
+            <Dropdown
+              value={tecnicoId}
+              options={tecnicos.map((item) => ({
+                label: item.zona
+                  ? `${item.nombre} · ${item.zona}`
+                  : item.nombre,
+                value: item.id,
+              }))}
+              placeholder="Elige un técnico"
+              className="w-full lg:max-w-sm"
+              showClear
+              onChange={(event) => setTecnicoId(event.value ?? null)}
+            />
+          ) : null}
           <InputText
             value={query}
             className="w-full"
-            placeholder="Filtrar ciudad..."
+            placeholder={vista === "orden" ? "Buscar orden, cliente, ciudad..." : "Filtrar ciudad..."}
             onChange={(event) => setQuery(event.target.value)}
           />
           <Button type="submit" label="Buscar" icon="pi pi-search" outlined />
         </form>
 
         <div className="col-span-4 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 text-sm">
-          {tecnico ? (
+          {vista === "orden" ? (
+            <p className="m-0">
+              Elige <strong>Asignar</strong> en cada orden pendiente para dársela a un técnico
+              o dejarla sin asignar. Las recuperadas y anuladas no se reasignan.
+            </p>
+          ) : tecnico ? (
             <p className="m-0">
               <strong>{tecnico.nombre}</strong> tiene{" "}
               <strong>{resumen?.totalAsignadas ?? 0}</strong> órdenes asignadas
@@ -230,6 +342,127 @@ export function AsignacionDashboard() {
         ) : null}
 
         <div className="col-span-4">
+          {vista === "orden" ? (
+            <>
+              <DataTable
+                value={ordenes}
+                dataKey="id"
+                loading={loading || saving}
+                emptyMessage="No hay órdenes por recuperar"
+                tableStyle={{ minWidth: "100%" }}
+                stripedRows
+              >
+                <Column
+                  header="Orden"
+                  style={{ width: "12%" }}
+                  body={(row: Orden) => (
+                    <Tag value={formatOrdenNumero(row.orden)} severity="info" />
+                  )}
+                />
+                <Column
+                  header="Cliente"
+                  style={{ width: "22%" }}
+                  body={(row: Orden) => {
+                    const { nombre } = parseNombreCliente(row.cliente);
+                    return <strong>{titleCase(nombre || row.cliente)}</strong>;
+                  }}
+                />
+                <Column
+                  header="Ciudad"
+                  style={{ width: "16%" }}
+                  body={(row: Orden) => titleCase(row.ciudad)}
+                />
+                <Column
+                  header="Colonia"
+                  style={{ width: "16%" }}
+                  body={(row: Orden) => titleCase(row.colonia)}
+                />
+                <Column
+                  header="Técnico"
+                  style={{ width: "16%" }}
+                  body={(row: Orden) =>
+                    row.tecnico?.nombre ? (
+                      <Tag value={titleCase(row.tecnico.nombre)} />
+                    ) : (
+                      "Sin asignar"
+                    )
+                  }
+                />
+                <Column
+                  header="Acciones"
+                  style={{ width: "18%" }}
+                  body={(row: Orden) => (
+                    <Button
+                      type="button"
+                      label="Asignar"
+                      size="small"
+                      icon="pi pi-user"
+                      onClick={() => setAsignarOrden(row)}
+                    />
+                  )}
+                />
+              </DataTable>
+              <div className="mt-3 flex flex-col gap-3 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  <span>
+                    {meta.total === 0
+                      ? "Sin resultados"
+                      : `Mostrando ${Math.min((meta.page - 1) * meta.limit + 1, meta.total)}-${Math.min(meta.page * meta.limit, meta.total)} de ${meta.total}`}
+                  </span>
+                  <label className="flex items-center gap-2 font-medium">
+                    Por página
+                    <select
+                      value={meta.limit}
+                      className="p-inputtext p-component"
+                      onChange={(event) => {
+                        void loadOrdenes(1, query, Number(event.target.value));
+                      }}
+                    >
+                      {[10, 20, 50, 100].map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-center gap-1">
+                  <Button
+                    type="button"
+                    label="Anterior"
+                    size="small"
+                    outlined
+                    disabled={meta.page <= 1}
+                    onClick={() => void loadOrdenes(meta.page - 1, query, meta.limit)}
+                  />
+                  {visiblePages(meta.page, meta.totalPages).map((page, index) =>
+                    page === "…" ? (
+                      <span key={`ellipsis-${index}`} className="px-2">
+                        …
+                      </span>
+                    ) : (
+                      <Button
+                        key={page}
+                        type="button"
+                        label={String(page)}
+                        size="small"
+                        outlined={page !== meta.page}
+                        onClick={() => void loadOrdenes(page, query, meta.limit)}
+                      />
+                    ),
+                  )}
+                  <Button
+                    type="button"
+                    label="Siguiente"
+                    size="small"
+                    outlined
+                    disabled={meta.page >= meta.totalPages}
+                    onClick={() => void loadOrdenes(meta.page + 1, query, meta.limit)}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
           <DataTable
             key={tecnicoId ?? "sin-tecnico"}
             value={resumen?.ciudades ?? []}
@@ -313,6 +546,7 @@ export function AsignacionDashboard() {
               )}
             />
           </DataTable>
+          )}
         </div>
       </main>
     </AppShell>

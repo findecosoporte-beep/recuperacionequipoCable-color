@@ -12,6 +12,7 @@ import { Tag } from "primereact/tag";
 import { useAuth } from "@/components/auth-provider";
 import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
+import { AsignarOrdenDialog, guardarAsignacionOrden } from "@/components/asignar-orden-dialog";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { MotivoAnulacionDialog } from "@/components/motivo-anulacion-dialog";
 import { AcuseReciboDialog } from "@/components/acuse-recibo-dialog";
@@ -53,7 +54,7 @@ import {
   sumarDiasYmd,
   ymdEnZona,
 } from "@/lib/fecha";
-import type { Orden } from "@/lib/types";
+import type { Orden, Tecnico } from "@/lib/types";
 
 interface ListMeta {
   page: number;
@@ -111,6 +112,9 @@ export function EstadoDashboard() {
   const [anularOrden, setAnularOrden] = useState<Orden | null>(null);
   const [whatsappAbierto, setWhatsappAbierto] = useState(false);
   const [acuseOrden, setAcuseOrden] = useState<Orden | null>(null);
+  const [asignarOrden, setAsignarOrden] = useState<Orden | null>(null);
+  const [savingAsignacion, setSavingAsignacion] = useState(false);
+  const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [vista, setVista] = useState<"lista" | "semana">("lista");
   const [panel, setPanel] = useState<"ordenes" | "whatsapp">("ordenes");
   const [semanaInicio, setSemanaInicio] = useState(() => inicioSemanaYmd());
@@ -176,9 +180,29 @@ export function EstadoDashboard() {
     }
     if (panel === "whatsapp") return;
     void load(1, query, meta.limit, filtro);
+    if (tecnicos.length === 0) {
+      void apiRequestWithMeta<Tecnico[]>("/api/v1/tecnicos?limit=100&activo=true")
+        .then((result) => setTecnicos(result.data))
+        .catch(() => undefined);
+    }
     // Recarga al entrar, al cambiar de filtro o de vista semanal.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, router, filtro, vista, semanaInicio, panel]);
+
+  async function asignarTecnico(tecnicoId: string | null) {
+    if (!asignarOrden) return;
+    setSavingAsignacion(true);
+    setError(null);
+    try {
+      await guardarAsignacionOrden(asignarOrden.id, tecnicoId);
+      setAsignarOrden(null);
+      await load(meta.page, query);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo asignar la orden");
+    } finally {
+      setSavingAsignacion(false);
+    }
+  }
 
   async function marcarRecuperada(orden: Orden, equipos: string) {
     setSavingId(orden.id);
@@ -310,6 +334,15 @@ export function EstadoDashboard() {
         onConfirm={(equipos) => {
           if (!recuperoOrden) return;
           void marcarRecuperada(recuperoOrden, equipos);
+        }}
+      />
+      <AsignarOrdenDialog
+        orden={asignarOrden}
+        tecnicos={tecnicos}
+        saving={savingAsignacion}
+        onClose={() => setAsignarOrden(null)}
+        onConfirm={(tecnicoId) => {
+          void asignarTecnico(tecnicoId);
         }}
       />
       <MotivoAnulacionDialog
@@ -479,6 +512,19 @@ export function EstadoDashboard() {
               }}
             />
             <Column header="Ciudad" style={{ width: "12%" }} body={(row: Orden) => titleCase(row.ciudad)} />
+            {filtro === "por_recuperar" ? (
+              <Column
+                header="Técnico"
+                style={{ width: "12%" }}
+                body={(row: Orden) =>
+                  row.tecnico?.nombre ? (
+                    <Tag value={titleCase(row.tecnico.nombre)} />
+                  ) : (
+                    "Sin asignar"
+                  )
+                }
+              />
+            ) : null}
             <Column header="Colonia" style={{ width: "12%" }} body={(row: Orden) => titleCase(row.colonia)} />
             <Column
               header="Teléfono 1"
@@ -681,6 +727,13 @@ export function EstadoDashboard() {
                 return (
                   <div className="flex flex-wrap gap-1">
                     <WhatsAppOrdenButton orden={row} />
+                    <Button
+                      type="button"
+                      label="Asignar"
+                      size="small"
+                      text
+                      onClick={() => setAsignarOrden(row)}
+                    />
                     <Button
                       type="button"
                       label="Marcar recuperada"

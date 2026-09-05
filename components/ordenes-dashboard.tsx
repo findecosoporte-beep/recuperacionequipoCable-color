@@ -12,6 +12,7 @@ import { Tag } from "primereact/tag";
 import { useAuth } from "@/components/auth-provider";
 import { esAdmin, esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
+import { AsignarOrdenDialog, guardarAsignacionOrden } from "@/components/asignar-orden-dialog";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { OrdenFormModal } from "@/components/orden-form-modal";
 import { accesoriosTexto, comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
@@ -25,7 +26,7 @@ import {
   titleCase,
   visiblePages,
 } from "@/lib/format-orden";
-import type { BulkImportResult, Orden, OrdenPayload } from "@/lib/types";
+import type { BulkImportResult, Orden, OrdenPayload, Tecnico } from "@/lib/types";
 
 interface ListMeta {
   page: number;
@@ -55,6 +56,9 @@ export function OrdenesDashboard() {
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [recuperoOrden, setRecuperoOrden] = useState<Orden | null>(null);
   const [savingRecupero, setSavingRecupero] = useState(false);
+  const [asignarOrden, setAsignarOrden] = useState<Orden | null>(null);
+  const [savingAsignacion, setSavingAsignacion] = useState(false);
+  const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(
@@ -92,6 +96,9 @@ export function OrdenesDashboard() {
       return;
     }
     void load(1, query);
+    void apiRequestWithMeta<Tecnico[]>("/api/v1/tecnicos?limit=100&activo=true")
+      .then((result) => setTecnicos(result.data))
+      .catch(() => undefined);
     // Solo al entrar con sesión lista
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, router]);
@@ -143,6 +150,21 @@ export function OrdenesDashboard() {
       setFormError(err instanceof Error ? err.message : "No se pudo guardar");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function asignarTecnico(tecnicoId: string | null) {
+    if (!asignarOrden) return;
+    setSavingAsignacion(true);
+    setError(null);
+    try {
+      await guardarAsignacionOrden(asignarOrden.id, tecnicoId);
+      setAsignarOrden(null);
+      await load(meta.page, query);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo asignar la orden");
+    } finally {
+      setSavingAsignacion(false);
     }
   }
 
@@ -238,6 +260,15 @@ export function OrdenesDashboard() {
         onConfirm={(equipos) => {
           if (!recuperoOrden) return;
           void marcarRecuperada(recuperoOrden, equipos);
+        }}
+      />
+      <AsignarOrdenDialog
+        orden={asignarOrden}
+        tecnicos={tecnicos}
+        saving={savingAsignacion}
+        onClose={() => setAsignarOrden(null)}
+        onConfirm={(tecnicoId) => {
+          void asignarTecnico(tecnicoId);
         }}
       />
 
@@ -394,13 +425,22 @@ export function OrdenesDashboard() {
               body={(row: Orden) => (
                 <div className="flex flex-wrap gap-1">
                   {!esOrdenRecuperada(row.comentario, row.acuse) && row.estadoAnulacion !== "anulada" ? (
-                    <Button
-                      type="button"
-                      label="Recuperada"
-                      size="small"
-                      text
-                      onClick={() => setRecuperoOrden(row)}
-                    />
+                    <>
+                      <Button
+                        type="button"
+                        label="Asignar"
+                        size="small"
+                        text
+                        onClick={() => setAsignarOrden(row)}
+                      />
+                      <Button
+                        type="button"
+                        label="Recuperada"
+                        size="small"
+                        text
+                        onClick={() => setRecuperoOrden(row)}
+                      />
+                    </>
                   ) : null}
                   <Button
                     type="button"

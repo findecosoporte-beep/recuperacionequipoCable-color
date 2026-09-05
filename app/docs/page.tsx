@@ -97,6 +97,11 @@ const endpoints = [
     description: "Quita las órdenes de una ciudad al técnico indicado.",
   },
   {
+    method: "POST",
+    path: "/api/v1/asignaciones/orden",
+    description: "Asigna o quita una sola orden a un técnico. Body: ordenId, tecnicoId (null para liberar).",
+  },
+  {
     method: "GET",
     path: "/api/v1/avisos-whatsapp",
     description: "Control semanal de WhatsApp enviados. Query: desde, hasta (YYYY-MM-DD).",
