@@ -14,6 +14,7 @@ import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { MotivoAnulacionDialog } from "@/components/motivo-anulacion-dialog";
+import { WhatsAppOrdenButton } from "@/components/whatsapp-orden-button";
 import { WhatsAppPorRecuperarDialog } from "@/components/whatsapp-por-recuperar-dialog";
 import { RecuperadasPorSemana } from "@/components/recuperadas-por-semana";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
@@ -511,6 +512,7 @@ export function EstadoDashboard() {
                 if (filtro === "por_anular") {
                   return (
                     <div className="flex flex-wrap gap-1">
+                      <WhatsAppOrdenButton orden={row} />
                       <Button
                         type="button"
                         label="Anulada"
@@ -549,6 +551,8 @@ export function EstadoDashboard() {
                 }
                 if (filtro === "anulada") {
                   return (
+                    <div className="flex flex-wrap gap-1">
+                      <WhatsAppOrdenButton orden={row} />
                     <Button
                       type="button"
                       label="Reabrir"
@@ -565,11 +569,13 @@ export function EstadoDashboard() {
                         )
                       }
                     />
+                    </div>
                   );
                 }
                 if (filtro === "recuperada") {
                   return (
                     <div className="flex flex-wrap gap-1">
+                      <WhatsAppOrdenButton orden={row} />
                       <Button
                         type="button"
                         label="Quitar recuperada"
@@ -604,6 +610,7 @@ export function EstadoDashboard() {
                 }
                 return (
                   <div className="flex flex-wrap gap-1">
+                    <WhatsAppOrdenButton orden={row} />
                     <Button
                       type="button"
                       label="Marcar recuperada"

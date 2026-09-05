@@ -6,6 +6,7 @@ import {
   numeroWhatsApp,
   numerosWhatsAppDe,
   telefonoWhatsApp1,
+  enlaceWhatsAppOrden,
   urlWhatsApp,
 } from "./whatsapp";
 import type { Orden } from "./types";
@@ -62,5 +63,17 @@ describe("whatsapp", () => {
     });
     assert.equal(texto, "Hola Ana Ruiz, orden 1001 en Tegucigalpa");
     assert.ok(urlWhatsApp("50499887766", texto).startsWith("https://wa.me/50499887766?text="));
+  });
+
+  it("arma el enlace de WhatsApp de una orden por el Teléfono 1", () => {
+    const url = enlaceWhatsAppOrden(
+      orden({ orden: "1001", cliente: "Ana Ruiz", telefono: "92763326 / 98755858" }),
+    );
+    assert.ok(url?.startsWith("https://wa.me/50492763326?text="));
+    assert.ok(url?.includes(encodeURIComponent("Ana Ruiz")));
+    assert.equal(
+      enlaceWhatsAppOrden(orden({ orden: "1002", cliente: "Sin numero", telefono: "123" })),
+      null,
+    );
   });
 });

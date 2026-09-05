@@ -81,3 +81,12 @@ export function mensajeWhatsApp(plantilla: string, destino: DestinoWhatsApp): st
 export function urlWhatsApp(wa: string, texto: string): string {
   return `https://wa.me/${wa}?text=${encodeURIComponent(texto)}`;
 }
+
+export function enlaceWhatsAppOrden(
+  orden: Orden,
+  plantilla = MENSAJE_POR_RECUPERAR,
+): string | null {
+  const destino = destinosWhatsApp([orden])[0];
+  if (!destino) return null;
+  return urlWhatsApp(destino.wa, mensajeWhatsApp(plantilla, destino));
+}
