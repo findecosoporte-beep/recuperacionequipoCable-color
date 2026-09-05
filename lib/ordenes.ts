@@ -138,7 +138,7 @@ function rangoRecuperada(query: ListQuery) {
   };
 }
 
-function buildWhere(query: ListQuery) {
+function buildWhere(query: ListQuery & { excluirRecuperadas?: boolean }) {
   const rango = query.estado === "recuperada" ? rangoRecuperada(query) : null;
   const filters = [
     ...(query.ciudad ? [{ ciudad: contains(query.ciudad) }] : []),
@@ -173,6 +173,7 @@ function buildWhere(query: ListQuery) {
     ...filtroEquipo(query.equipo),
     ...(query.asignacion === "sin_asignar" ? [{ tecnicoId: null }] : []),
     ...(query.asignacion === "asignada" ? [{ tecnicoId: { not: null } }] : []),
+    ...(query.excluirRecuperadas ? [noRecuperadaWhere()] : []),
     ...(rango ? [rango] : []),
     ...(query.q
       ? [
@@ -211,7 +212,7 @@ function buildOrderBy(sort: ListQuery["sort"], order: ListQuery["order"]) {
   }
 }
 
-export async function listOrdenes(query: ListQuery) {
+export async function listOrdenes(query: ListQuery & { excluirRecuperadas?: boolean }) {
   const where = buildWhere(query);
   const orderBy = buildOrderBy(query.sort, query.order);
   const skip = (query.page - 1) * query.limit;

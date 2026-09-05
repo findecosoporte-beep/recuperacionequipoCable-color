@@ -26,7 +26,12 @@ export const GET = apiHandler(async (request: NextRequest) => {
           }
         : parsed.estado === "recuperada"
           ? { ...parsed, recuperadoPorId: auth.user.sub, tecnicoId: undefined }
-          : { ...parsed, tecnicoId: auth.user.sub, recuperadoPorId: undefined }
+          : {
+              ...parsed,
+              tecnicoId: auth.user.sub,
+              recuperadoPorId: undefined,
+              excluirRecuperadas: true,
+            }
       : parsed;
   const result = await listOrdenes(query);
   return json(result.items, 200, { meta: result.meta });
