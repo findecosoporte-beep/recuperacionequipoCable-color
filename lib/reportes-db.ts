@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+import { acusePublico } from "@/lib/acuse";
 import { prisma } from "@/lib/db";
 import { limitesDiaUtc } from "@/lib/fecha";
 import { recuperadaFiltro } from "@/lib/ordenes";
@@ -32,7 +34,7 @@ export async function listReporte(query: {
   resumen: ReturnType<typeof resumenReporte>;
 }> {
   const rango = rangoFecha(query.desde, query.hasta);
-  const filtros = [
+  const filtros: Prisma.OrdenWhereInput[] = [
     query.tipo === "recuperadas"
       ? { AND: [recuperadaFiltro, { estadoAnulacion: null }] }
       : { estadoAnulacion: "por_anular" },
@@ -77,9 +79,20 @@ export async function listReporte(query: {
 
   const items = ordenes.map((orden) =>
     filaDeOrden({
-      ...orden,
+      id: orden.id,
+      orden: orden.orden,
+      cliente: orden.cliente,
+      ciudad: orden.ciudad,
+      colonia: orden.colonia,
+      direccion: orden.direccion,
+      telefono: orden.telefono,
+      comentario: orden.comentario,
+      motivoAnulacion: orden.motivoAnulacion,
+      acuse: acusePublico(orden.acuse),
       recuperadaEn: orden.acuse?.updatedAt?.toISOString() ?? orden.updatedAt.toISOString(),
       updatedAt: orden.updatedAt.toISOString(),
+      tecnico: orden.tecnico,
+      recuperadoPor: orden.recuperadoPor,
     }),
   );
 

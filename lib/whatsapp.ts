@@ -65,7 +65,9 @@ export function telefonoWhatsApp1(telefono: string): string | null {
   return primero ? numeroWhatsApp(primero) : null;
 }
 
-export function destinosWhatsApp(ordenes: Orden[]): DestinoWhatsApp[] {
+export function destinosWhatsApp(
+  ordenes: Array<Pick<Orden, "id" | "orden" | "cliente" | "telefono" | "ciudad" | "colonia">>,
+): DestinoWhatsApp[] {
   const porNumero = new Map<string, DestinoWhatsApp>();
 
   for (const orden of ordenes) {
