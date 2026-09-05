@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from "primereact/button";
-import { enlaceWhatsAppOrden } from "@/lib/whatsapp";
+import { useEmpresaWhatsApp } from "@/lib/whatsapp-empresa";
+import { enlaceWhatsAppOrden, plantillaPorEmpresa } from "@/lib/whatsapp";
 import type { Orden } from "@/lib/types";
 
 interface Props {
@@ -9,7 +10,8 @@ interface Props {
 }
 
 export function WhatsAppOrdenButton({ orden }: Props) {
-  const url = enlaceWhatsAppOrden(orden);
+  const { empresa } = useEmpresaWhatsApp();
+  const url = enlaceWhatsAppOrden(orden, plantillaPorEmpresa(empresa));
 
   return (
     <Button

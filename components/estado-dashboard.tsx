@@ -14,6 +14,7 @@ import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { MotivoAnulacionDialog } from "@/components/motivo-anulacion-dialog";
+import { WhatsAppEmpresaSelector } from "@/components/whatsapp-empresa-selector";
 import { WhatsAppOrdenButton } from "@/components/whatsapp-orden-button";
 import { WhatsAppPorRecuperarDialog } from "@/components/whatsapp-por-recuperar-dialog";
 import { RecuperadasPorSemana } from "@/components/recuperadas-por-semana";
@@ -347,6 +348,10 @@ export function EstadoDashboard() {
             />
           </div>
         ) : null}
+
+        <div className="col-span-4">
+          <WhatsAppEmpresaSelector />
+        </div>
 
         {filtro === "por_recuperar" ? (
           <div className="col-span-4 flex flex-col gap-3 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">

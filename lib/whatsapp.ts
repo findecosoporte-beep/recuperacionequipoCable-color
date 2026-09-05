@@ -2,8 +2,28 @@ import { telefonosDigitos, titleCase } from "@/lib/format-orden";
 import { parseNombreCliente } from "@/lib/nombre-cliente";
 import type { Orden } from "@/lib/types";
 
-export const MENSAJE_POR_RECUPERAR =
-  "Hola {nombre}, le escribimos de Cable Color. Tenemos pendiente la recuperación de equipo de su servicio (orden {orden}) en {colonia}, {ciudad}. Un técnico pasará a recogerlo. Si ya lo entregó o tiene dudas, responda este mensaje. Gracias.";
+export type EmpresaWhatsApp = "isg" | "cable_color";
+
+export const EMPRESAS_WHATSAPP: Array<{ id: EmpresaWhatsApp; label: string }> = [
+  { id: "isg", label: "ISG" },
+  { id: "cable_color", label: "Cable Color" },
+];
+
+export const EMPRESA_WHATSAPP_DEFAULT: EmpresaWhatsApp = "isg";
+
+export function esEmpresaWhatsApp(value: string | null | undefined): value is EmpresaWhatsApp {
+  return value === "isg" || value === "cable_color";
+}
+
+export function etiquetaEmpresa(empresa: EmpresaWhatsApp): string {
+  return empresa === "cable_color" ? "Cable Color" : "ISG";
+}
+
+export function plantillaPorEmpresa(empresa: EmpresaWhatsApp = EMPRESA_WHATSAPP_DEFAULT): string {
+  return `Hola {nombre}, le escribimos de ${etiquetaEmpresa(empresa)}. Tenemos pendiente la recuperación de equipo de su servicio (orden {orden}) en {colonia}, {ciudad}. Un técnico pasará a recogerlo. Si ya lo entregó o tiene dudas, responda este mensaje. Gracias.`;
+}
+
+export const MENSAJE_POR_RECUPERAR = plantillaPorEmpresa();
 
 export interface DestinoWhatsApp {
   wa: string;
@@ -84,7 +104,7 @@ export function urlWhatsApp(wa: string, texto: string): string {
 
 export function enlaceWhatsAppOrden(
   orden: Orden,
-  plantilla = MENSAJE_POR_RECUPERAR,
+  plantilla = plantillaPorEmpresa(),
 ): string | null {
   const destino = destinosWhatsApp([orden])[0];
   if (!destino) return null;

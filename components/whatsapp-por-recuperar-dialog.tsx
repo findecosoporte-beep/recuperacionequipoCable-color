@@ -5,13 +5,15 @@ import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Message } from "primereact/message";
+import { WhatsAppEmpresaSelector } from "@/components/whatsapp-empresa-selector";
 import { apiRequestWithMeta } from "@/lib/api-client";
 import { formatOrdenNumero, formatTelefono } from "@/lib/format-orden";
 import type { Orden } from "@/lib/types";
+import { useEmpresaWhatsApp } from "@/lib/whatsapp-empresa";
 import {
   destinosWhatsApp,
-  MENSAJE_POR_RECUPERAR,
   mensajeWhatsApp,
+  plantillaPorEmpresa,
   telefonoWhatsApp1,
   urlWhatsApp,
   type DestinoWhatsApp,
@@ -27,8 +29,9 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sinTelefono, setSinTelefono] = useState(0);
+  const { empresa } = useEmpresaWhatsApp();
   const [destinos, setDestinos] = useState<DestinoWhatsApp[]>([]);
-  const [plantilla, setPlantilla] = useState(MENSAJE_POR_RECUPERAR);
+  const [plantilla, setPlantilla] = useState(() => plantillaPorEmpresa(empresa));
   const [indice, setIndice] = useState(0);
   const [enviados, setEnviados] = useState<string[]>([]);
 
@@ -41,7 +44,6 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
     setDestinos([]);
     setIndice(0);
     setEnviados([]);
-    setPlantilla(MENSAJE_POR_RECUPERAR);
 
     void (async () => {
       try {
@@ -79,6 +81,10 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
       cancelled = true;
     };
   }, [visible, search]);
+
+  useEffect(() => {
+    setPlantilla(plantillaPorEmpresa(empresa));
+  }, [empresa]);
 
   const actual = destinos[indice] ?? null;
   const preview = useMemo(
@@ -122,6 +128,8 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
         ) : null}
         {error ? <Message severity="error" text={error} /> : null}
 
+        <WhatsAppEmpresaSelector compact />
+
         {!loading && !error ? (
           <p className="m-0 text-sm">
             {destinos.length === 0
@@ -144,7 +152,8 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
           />
         </label>
         <p className="m-0 text-xs text-[var(--text-color-secondary)]">
-          Puedes usar {"{nombre}"}, {"{orden}"}, {"{colonia}"} y {"{ciudad}"}.
+          Puedes usar {"{nombre}"}, {"{orden}"}, {"{colonia}"} y {"{ciudad}"}. El
+          nombre de la empresa lo eliges arriba.
         </p>
 
         {actual ? (

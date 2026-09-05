@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   destinosWhatsApp,
+  enlaceWhatsAppOrden,
   mensajeWhatsApp,
   numeroWhatsApp,
   numerosWhatsAppDe,
+  plantillaPorEmpresa,
   telefonoWhatsApp1,
-  enlaceWhatsAppOrden,
   urlWhatsApp,
 } from "./whatsapp";
 import type { Orden } from "./types";
@@ -63,6 +64,17 @@ describe("whatsapp", () => {
     });
     assert.equal(texto, "Hola Ana Ruiz, orden 1001 en Tegucigalpa");
     assert.ok(urlWhatsApp("50499887766", texto).startsWith("https://wa.me/50499887766?text="));
+  });
+
+  it("escribe ISG o Cable Color según el cliente del mensaje", () => {
+    assert.match(plantillaPorEmpresa("isg"), /le escribimos de ISG/);
+    assert.match(plantillaPorEmpresa("cable_color"), /le escribimos de Cable Color/);
+    const url = enlaceWhatsAppOrden(
+      orden({ orden: "93036922", cliente: "Maria Estela", telefono: "92763326" }),
+      plantillaPorEmpresa("isg"),
+    );
+    assert.ok(url?.includes(encodeURIComponent("ISG")));
+    assert.equal(url?.includes(encodeURIComponent("Cable Color")), false);
   });
 
   it("arma el enlace de WhatsApp de una orden por el Teléfono 1", () => {

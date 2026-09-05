@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth-provider";
 import { esAdmin, esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
+import { WhatsAppEmpresaSelector } from "@/components/whatsapp-empresa-selector";
 import { WhatsAppOrdenButton } from "@/components/whatsapp-orden-button";
 import { OrdenFormModal } from "@/components/orden-form-modal";
 import { accesoriosTexto, comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
@@ -297,6 +298,10 @@ export function OrdenesDashboard() {
             <Message severity="error" text={error} />
           </div>
         ) : null}
+
+        <div className="col-span-4">
+          <WhatsAppEmpresaSelector />
+        </div>
 
         <div className="col-span-4">
           <DataTable
