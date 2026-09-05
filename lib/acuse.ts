@@ -260,8 +260,9 @@ export function htmlAcuse(acuse: AcuseRecibido): string {
 <html>
 <head>
   <meta charset="utf-8" />
+  <title>Acuse de Recibo</title>
   <style>
-    @page { margin: 36px; }
+    @page { margin: 0; }
     html, body {
       margin: 0;
       padding: 0;
@@ -269,7 +270,7 @@ export function htmlAcuse(acuse: AcuseRecibido): string {
       color: #111111;
       font-family: Arial, Helvetica, sans-serif;
     }
-    .page { background: #ffffff; color: #111111; padding: 28px 32px; min-height: 100%; }
+    .page { background: #ffffff; color: #111111; padding: 36px 40px; min-height: 100%; }
     .letterhead {
       display: flex;
       align-items: center;

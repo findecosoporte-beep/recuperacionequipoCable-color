@@ -46,6 +46,8 @@ describe("acuse", () => {
     const acuse = extraerAcuse(comentario);
     assert.equal(acuse?.cliente, "Maria Estela");
     assert.equal(acuse?.modemOnu, "SN-1");
+    assert.match(htmlAcuse(acuse!), /<title>Acuse de Recibo<\/title>/);
+    assert.match(htmlAcuse(acuse!), /@page \{ margin: 0; \}/);
     assert.match(htmlAcuse(acuse!), /logo-isg/);
     assert.match(htmlAcuse(acuse!), /data:image\/png/);
     assert.match(htmlAcuse(acuse!), /ISG Communications/);

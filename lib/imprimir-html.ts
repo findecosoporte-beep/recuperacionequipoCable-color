@@ -21,9 +21,27 @@ function esperarImagenes(doc: Document): Promise<void> {
   ).then(() => undefined);
 }
 
+function imprimirEnDocumento(doc: Document, win: Window) {
+  doc.title = "Acuse de Recibo";
+  void esperarImagenes(doc).then(() => {
+    win.focus();
+    win.print();
+  });
+}
+
 export function imprimirHtml(html: string): boolean {
+  const ventana = window.open("about:blank", "acuse-recibo");
+  if (ventana) {
+    ventana.document.open();
+    ventana.document.write(html);
+    ventana.document.close();
+    imprimirEnDocumento(ventana.document, ventana);
+    ventana.addEventListener("afterprint", () => ventana.close());
+    return true;
+  }
+
   const iframe = document.createElement("iframe");
-  iframe.setAttribute("title", "Imprimir acuse");
+  iframe.setAttribute("title", "Acuse de Recibo");
   iframe.setAttribute("aria-hidden", "true");
   iframe.style.position = "fixed";
   iframe.style.right = "0";
@@ -43,12 +61,8 @@ export function imprimirHtml(html: string): boolean {
   doc.open();
   doc.write(html);
   doc.close();
-
-  void esperarImagenes(doc).then(() => {
-    win.focus();
-    win.print();
-    window.setTimeout(() => iframe.remove(), 1500);
-  });
-
+  imprimirEnDocumento(doc, win);
+  win.addEventListener("afterprint", () => iframe.remove());
+  window.setTimeout(() => iframe.remove(), 60_000);
   return true;
 }
