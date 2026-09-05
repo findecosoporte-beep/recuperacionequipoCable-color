@@ -46,7 +46,9 @@ describe("acuse", () => {
     const acuse = extraerAcuse(comentario);
     assert.equal(acuse?.cliente, "Maria Estela");
     assert.equal(acuse?.modemOnu, "SN-1");
-    assert.match(htmlAcuse(acuse!), /ISG COMMUNICATIONS/);
+    assert.match(htmlAcuse(acuse!), /logo-isg/);
+    assert.match(htmlAcuse(acuse!), /ISG/);
+    assert.match(htmlAcuse(acuse!), /COMMUNICATIONS/);
     assert.match(htmlAcuse(acuse!), /Maria Estela/);
   });
 });

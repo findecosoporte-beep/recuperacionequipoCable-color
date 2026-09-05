@@ -247,6 +247,26 @@ function lineaHtml(value: string): string {
   return escapeHtml(trimmed || "____________________");
 }
 
+const LOGO_ISG_SVG = `<svg class="logo-isg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72" role="img" aria-label="Logo ISG">
+  <defs>
+    <radialGradient id="acuseIsgGlobe" cx="32%" cy="28%" r="74%">
+      <stop offset="0%" stop-color="#ffe08a"/>
+      <stop offset="26%" stop-color="#f5b942"/>
+      <stop offset="58%" stop-color="#e85d1c"/>
+      <stop offset="100%" stop-color="#9b1c1c"/>
+    </radialGradient>
+    <radialGradient id="acuseIsgShine" cx="30%" cy="26%" r="55%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="36" cy="36" r="34" fill="url(#acuseIsgGlobe)"/>
+  <ellipse cx="36" cy="36" rx="15" ry="34" fill="none" stroke="#7f1d1d" stroke-opacity="0.28" stroke-width="1.4"/>
+  <ellipse cx="36" cy="36" rx="34" ry="13" fill="none" stroke="#7f1d1d" stroke-opacity="0.22" stroke-width="1.2"/>
+  <path d="M9 26c14-11 41-11 55 3" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="2"/>
+  <circle cx="36" cy="36" r="34" fill="url(#acuseIsgShine)"/>
+</svg>`;
+
 export function htmlAcuse(acuse: AcuseRecibido): string {
   const accesorios = ACCESORIOS.map((nombre) => {
     const qty = acuse.accesorios[nombre] > 0 ? String(acuse.accesorios[nombre]) : "&nbsp;";
@@ -267,7 +287,11 @@ export function htmlAcuse(acuse: AcuseRecibido): string {
       font-family: Arial, Helvetica, sans-serif;
     }
     .page { background: #ffffff; color: #111111; padding: 28px 32px; min-height: 100%; }
-    .brand { text-align: center; color: #5c2d91; font-weight: 800; font-size: 18px; letter-spacing: 0.6px; }
+    .letterhead { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 6px; }
+    .logo-isg { width: 64px; height: 64px; display: block; flex-shrink: 0; }
+    .brand-block { text-align: left; }
+    .brand { color: #b91c1c; font-weight: 900; font-size: 28px; letter-spacing: 1.2px; line-height: 1; }
+    .brand-sub { color: #7f1d1d; font-weight: 700; font-size: 11px; letter-spacing: 2.4px; margin-top: 6px; }
     h1 { text-align: center; font-size: 22px; margin: 18px 0 28px; color: #111111; }
     .label { font-size: 11px; color: #444444; margin-bottom: 4px; }
     .field { border-bottom: 1px solid #333333; padding-bottom: 4px; margin-bottom: 16px; font-size: 14px; }
@@ -281,7 +305,13 @@ export function htmlAcuse(acuse: AcuseRecibido): string {
 </head>
 <body>
   <div class="page">
-    <div class="brand">ISG COMMUNICATIONS</div>
+    <div class="letterhead">
+      ${LOGO_ISG_SVG}
+      <div class="brand-block">
+        <div class="brand">ISG</div>
+        <div class="brand-sub">COMMUNICATIONS</div>
+      </div>
+    </div>
     <h1>Acuse de Recibo</h1>
     <div class="label">Recibimos del cliente:</div>
     <div class="field">${lineaHtml(acuse.cliente)}</div>
