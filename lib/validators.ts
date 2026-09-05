@@ -108,4 +108,8 @@ export const avisoWhatsAppListSchema = z.object({
   hasta: z.string().trim().min(10).max(10),
 });
 
+export const acuseEnlaceSchema = z.object({
+  ordenId: z.string().trim().min(1).max(40),
+});
+
 export type AcuseListQuery = z.infer<typeof acuseListQuerySchema>;

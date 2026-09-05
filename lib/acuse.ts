@@ -250,11 +250,17 @@ function lineaHtml(value: string): string {
 
 const LOGO_ISG_HTML = `<img class="logo-isg" src="${LOGO_ISG_SRC}" alt="ISG Communications" />`;
 
-export function htmlAcuse(acuse: AcuseRecibido): string {
+export function htmlAcuse(
+  acuse: AcuseRecibido,
+  opciones?: { compartir?: boolean },
+): string {
   const accesorios = ACCESORIOS.map((nombre) => {
     const qty = acuse.accesorios[nombre] > 0 ? String(acuse.accesorios[nombre]) : "&nbsp;";
     return `<div class="acc"><span>${escapeHtml(nombre)}</span><span>( ${qty} )</span></div>`;
   }).join("");
+  const barra = opciones?.compartir
+    ? `<div class="share-bar"><button type="button" onclick="window.print()">Guardar PDF</button></div>`
+    : "";
 
   return `<!DOCTYPE html>
 <html>
@@ -289,10 +295,22 @@ export function htmlAcuse(acuse: AcuseRecibido): string {
     .acc { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
     .firma { margin-top: 48px; border-bottom: 1px solid #111111; padding-bottom: 6px; font-size: 14px; }
     .firma-label { text-align: center; font-size: 11px; margin-top: 8px; }
+    .share-bar { text-align: center; margin-bottom: 16px; }
+    .share-bar button {
+      background: #16a34a;
+      color: #ffffff;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    @media print { .share-bar { display: none; } }
   </style>
 </head>
 <body>
   <div class="page">
+    ${barra}
     <div class="letterhead">
       ${LOGO_ISG_HTML}
     </div>

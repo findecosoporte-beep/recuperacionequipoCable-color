@@ -107,6 +107,11 @@ const endpoints = [
     description:
       "Registra avisos de WhatsApp. Body: ordenId, empresa (isg | cable_color), telefono opcional. Sin teléfono registra Teléfono 1 y Teléfono 2.",
   },
+  {
+    method: "POST",
+    path: "/api/v1/acuses/enlace",
+    description: "Crea el enlace público del acuse para enviarlo por WhatsApp. Body: ordenId.",
+  },
 ];
 
 const fields = [

@@ -13,8 +13,18 @@ import {
   validarAcuse,
   type AcuseRecibido,
 } from "@/lib/acuse";
-import { formatOrdenNumero } from "@/lib/format-orden";
+import { mensajeAcuseWhatsApp } from "@/lib/acuse-enlace";
+import { apiRequest } from "@/lib/api-client";
+import { formatOrdenNumero, formatTelefono } from "@/lib/format-orden";
 import { imprimirHtml } from "@/lib/imprimir-html";
+import { registrarEnvioWhatsApp } from "@/lib/whatsapp-envio";
+import { useEmpresaWhatsApp } from "@/lib/whatsapp-empresa";
+import {
+  destinosWhatsApp,
+  numerosWhatsAppDe,
+  urlWhatsApp,
+  type DestinoWhatsApp,
+} from "@/lib/whatsapp";
 import type { Orden } from "@/lib/types";
 
 interface Props {
@@ -27,9 +37,12 @@ interface Props {
 
 export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Props) {
   const existente = orden ? acuseDeOrden(orden) : null;
+  const { empresa } = useEmpresaWhatsApp();
   const [form, setForm] = useState<AcuseRecibido | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [compartiendo, setCompartiendo] = useState(false);
   const [vista, setVista] = useState<"formulario" | "acuse">(existente ? "acuse" : "formulario");
+  const telefonos = orden ? numerosWhatsAppDe(orden.telefono) : [];
 
   useEffect(() => {
     if (!orden) {
@@ -61,6 +74,41 @@ export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Pro
         },
       };
     });
+  }
+
+  async function compartirPorWhatsApp() {
+    if (!orden) return;
+    if (!existente) {
+      setError("Guarda el acuse primero para poder compartirlo por WhatsApp");
+      setVista("formulario");
+      return;
+    }
+    if (telefonos.length === 0) {
+      setError("Esta orden no tiene un número de WhatsApp válido");
+      return;
+    }
+
+    setCompartiendo(true);
+    setError(null);
+    try {
+      const data = await apiRequest<{ path: string; destinos: DestinoWhatsApp[] }>(
+        "/api/v1/acuses/enlace",
+        {
+          method: "POST",
+          body: JSON.stringify({ ordenId: orden.id }),
+        },
+      );
+      const url = `${window.location.origin}${data.path}`;
+      const destinos = data.destinos.length > 0 ? data.destinos : destinosWhatsApp([orden]);
+      for (const destino of destinos) {
+        window.open(urlWhatsApp(destino.wa, mensajeAcuseWhatsApp(destino, url)), "_blank", "noopener,noreferrer");
+        void registrarEnvioWhatsApp(orden.id, empresa, destino.wa);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo compartir el acuse");
+    } finally {
+      setCompartiendo(false);
+    }
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -113,7 +161,36 @@ export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Pro
                 }
               }}
             />
+            <Button
+              type="button"
+              label={
+                telefonos.length > 1
+                  ? `WhatsApp PDF (${telefonos.length})`
+                  : "WhatsApp PDF"
+              }
+              icon="pi pi-whatsapp"
+              severity="success"
+              outlined
+              loading={compartiendo}
+              disabled={telefonos.length === 0}
+              title={
+                telefonos.length === 0
+                  ? "Esta orden no tiene un número de WhatsApp"
+                  : `Enviar el acuse a ${telefonos.map((item) => formatTelefono(item)).join(" y ")}`
+              }
+              onClick={() => {
+                void compartirPorWhatsApp();
+              }}
+            />
           </div>
+          {telefonos.length > 0 ? (
+            <p className="m-0 text-sm text-[var(--text-color-secondary)]">
+              WhatsApp: {telefonos.map((item) => formatTelefono(item)).join("  /  ")}
+            </p>
+          ) : (
+            <Message severity="warn" text="Esta orden no tiene un número de WhatsApp válido." />
+          )}
+          {error && vista === "acuse" ? <Message severity="error" text={error} /> : null}
 
           {vista === "acuse" ? (
             <iframe
