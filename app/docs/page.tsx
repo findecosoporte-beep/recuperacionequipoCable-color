@@ -83,18 +83,18 @@ const endpoints = [
     method: "GET",
     path: "/api/v1/asignaciones",
     description:
-      "Resumen de órdenes por ciudad. Query: tecnicoId, q (ciudad).",
+      "Resumen de órdenes por ciudad y barrio. Query: tecnicoId, q (ciudad o colonia).",
   },
   {
     method: "POST",
     path: "/api/v1/asignaciones",
     description:
-      "Asigna órdenes de una ciudad a un técnico. modo: libres | todas.",
+      "Asigna órdenes de una ciudad o barrio a un técnico. modo: libres | todas. colonia opcional.",
   },
   {
     method: "POST",
     path: "/api/v1/asignaciones/liberar",
-    description: "Quita las órdenes de una ciudad al técnico indicado.",
+    description: "Quita las órdenes de una ciudad o barrio al técnico indicado.",
   },
   {
     method: "POST",

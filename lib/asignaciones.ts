@@ -9,8 +9,15 @@ import type {
   LiberarCiudadInput,
 } from "@/lib/validators-asignaciones";
 
-function ciudadEquals(ciudad: string) {
-  return { equals: ciudad, mode: "insensitive" as const };
+function textoEquals(value: string) {
+  return { equals: value, mode: "insensitive" as const };
+}
+
+function lugarWhere(ciudad: string, colonia?: string) {
+  return {
+    ciudad: textoEquals(ciudad),
+    ...(colonia !== undefined ? { colonia: textoEquals(colonia) } : {}),
+  };
 }
 
 function pendientesAsignacion() {
@@ -19,14 +26,39 @@ function pendientesAsignacion() {
   };
 }
 
+function sumarGrupo(
+  current: { total: number; libres: number; asignadas: number; otras: number },
+  tecnicoId: string | null,
+  count: number,
+  selectedTecnicoId?: string,
+) {
+  current.total += count;
+  if (!tecnicoId) {
+    current.libres += count;
+  } else if (selectedTecnicoId && tecnicoId === selectedTecnicoId) {
+    current.asignadas += count;
+  } else {
+    current.otras += count;
+  }
+}
+
 export async function resumenAsignacion(query: AsignacionQuery) {
   const groups = await prisma.orden.groupBy({
-    by: ["ciudad", "tecnicoId"],
+    by: ["ciudad", "colonia", "tecnicoId"],
     _count: { _all: true },
     where: {
       AND: [
         pendientesAsignacion(),
-        ...(query.q ? [{ ciudad: { contains: query.q, mode: "insensitive" as const } }] : []),
+        ...(query.q
+          ? [
+              {
+                OR: [
+                  { ciudad: { contains: query.q, mode: "insensitive" as const } },
+                  { colonia: { contains: query.q, mode: "insensitive" as const } },
+                ],
+              },
+            ]
+          : []),
       ],
     },
   });
@@ -41,29 +73,49 @@ export async function resumenAsignacion(query: AsignacionQuery) {
       otras: number;
     }
   >();
+  const barrios = new Map<
+    string,
+    {
+      ciudad: string;
+      colonia: string;
+      total: number;
+      libres: number;
+      asignadas: number;
+      otras: number;
+    }
+  >();
 
   for (const group of groups) {
-    const current = ciudades.get(group.ciudad) ?? {
+    const ciudad = ciudades.get(group.ciudad) ?? {
       ciudad: group.ciudad,
       total: 0,
       libres: 0,
       asignadas: 0,
       otras: 0,
     };
-    current.total += group._count._all;
-    if (!group.tecnicoId) {
-      current.libres += group._count._all;
-    } else if (query.tecnicoId && group.tecnicoId === query.tecnicoId) {
-      current.asignadas += group._count._all;
-    } else {
-      current.otras += group._count._all;
-    }
-    ciudades.set(group.ciudad, current);
+    sumarGrupo(ciudad, group.tecnicoId, group._count._all, query.tecnicoId);
+    ciudades.set(group.ciudad, ciudad);
+
+    const barrioKey = `${group.ciudad.toLowerCase()}\0${group.colonia.toLowerCase()}`;
+    const barrio = barrios.get(barrioKey) ?? {
+      ciudad: group.ciudad,
+      colonia: group.colonia,
+      total: 0,
+      libres: 0,
+      asignadas: 0,
+      otras: 0,
+    };
+    sumarGrupo(barrio, group.tecnicoId, group._count._all, query.tecnicoId);
+    barrios.set(barrioKey, barrio);
   }
 
   const items = [...ciudades.values()].sort((a, b) =>
     a.ciudad.localeCompare(b.ciudad, "es"),
   );
+  const itemsBarrio = [...barrios.values()].sort((a, b) => {
+    const ciudad = a.ciudad.localeCompare(b.ciudad, "es");
+    return ciudad !== 0 ? ciudad : a.colonia.localeCompare(b.colonia, "es");
+  });
 
   let tecnico: {
     id: string;
@@ -98,15 +150,16 @@ export async function resumenAsignacion(query: AsignacionQuery) {
     tecnico,
     totalAsignadas,
     ciudades: items,
+    barrios: itemsBarrio,
   };
 }
 
-export function whereAsignarCiudad(ciudad: string, modo: "libres" | "todas") {
-  const whereCiudad = { ciudad: ciudadEquals(ciudad) };
+export function whereAsignarCiudad(ciudad: string, modo: "libres" | "todas", colonia?: string) {
+  const whereLugar = lugarWhere(ciudad, colonia);
   if (modo === "libres") {
-    return { AND: [whereCiudad, pendientesAsignacion(), { tecnicoId: null }] };
+    return { AND: [whereLugar, pendientesAsignacion(), { tecnicoId: null }] };
   }
-  return { AND: [whereCiudad, pendientesAsignacion()] };
+  return { AND: [whereLugar, pendientesAsignacion()] };
 }
 
 export async function asignarCiudad(input: AsignarCiudadInput) {
@@ -116,13 +169,14 @@ export async function asignarCiudad(input: AsignarCiudadInput) {
   }
 
   const result = await prisma.orden.updateMany({
-    where: whereAsignarCiudad(input.ciudad, input.modo),
+    where: whereAsignarCiudad(input.ciudad, input.modo, input.colonia),
     data: { tecnicoId: tecnico.id },
   });
 
   return {
     updated: result.count,
     ciudad: input.ciudad,
+    colonia: input.colonia,
     tecnicoId: tecnico.id,
     modo: input.modo,
   };
@@ -178,7 +232,7 @@ export async function liberarCiudad(input: LiberarCiudadInput) {
     where: {
       AND: [
         { tecnicoId: tecnico.id },
-        { ciudad: ciudadEquals(input.ciudad) },
+        lugarWhere(input.ciudad, input.colonia),
         pendientesAsignacion(),
       ],
     },
@@ -188,6 +242,7 @@ export async function liberarCiudad(input: LiberarCiudadInput) {
   return {
     updated: result.count,
     ciudad: input.ciudad,
+    colonia: input.colonia,
     tecnicoId: tecnico.id,
   };
 }

@@ -17,7 +17,7 @@ import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import { formatOrdenNumero, titleCase, visiblePages } from "@/lib/format-orden";
 import { parseNombreCliente } from "@/lib/nombre-cliente";
 import { esRolPanel } from "@/lib/roles";
-import type { CiudadAsignacion, Orden, ResumenAsignacion, Tecnico } from "@/lib/types";
+import type { BarrioAsignacion, CiudadAsignacion, Orden, ResumenAsignacion, Tecnico } from "@/lib/types";
 
 interface ListMeta {
   page: number;
@@ -32,7 +32,7 @@ export function AsignacionDashboard() {
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [tecnicoId, setTecnicoId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [vista, setVista] = useState<"ciudad" | "orden">("ciudad");
+  const [vista, setVista] = useState<"ciudad" | "barrio" | "orden">("ciudad");
   const [resumen, setResumen] = useState<ResumenAsignacion | null>(null);
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [meta, setMeta] = useState<ListMeta>({
@@ -115,11 +115,11 @@ export function AsignacionDashboard() {
 
   useEffect(() => {
     if (!ready || !user || !esRolPanel(user.rol)) return;
-    if (vista === "ciudad") {
-      void load();
+    if (vista === "orden") {
+      void loadOrdenes(1, query);
       return;
     }
-    void loadOrdenes(1, query);
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, tecnicoId, vista]);
 
@@ -133,7 +133,12 @@ export function AsignacionDashboard() {
 
   const tecnico = tecnicos.find((item) => item.id === tecnicoId) ?? null;
 
-  async function asignar(ciudad: CiudadAsignacion, modo: "libres" | "todas") {
+  function etiquetaLugar(ciudad: string, colonia?: string) {
+    const barrio = colonia?.trim() ? titleCase(colonia) : "sin barrio";
+    return colonia !== undefined ? `${titleCase(ciudad)} · ${barrio}` : titleCase(ciudad);
+  }
+
+  async function asignar(lugar: { ciudad: string; colonia?: string }, modo: "libres" | "todas") {
     if (!tecnicoId) return;
     setSaving(true);
     setError(null);
@@ -141,12 +146,18 @@ export function AsignacionDashboard() {
     try {
       const result = await apiRequest<{ updated: number }>("/api/v1/asignaciones", {
         method: "POST",
-        body: JSON.stringify({ tecnicoId, ciudad: ciudad.ciudad, modo }),
+        body: JSON.stringify({
+          tecnicoId,
+          ciudad: lugar.ciudad,
+          colonia: lugar.colonia,
+          modo,
+        }),
       });
+      const sitio = etiquetaLugar(lugar.ciudad, lugar.colonia);
       setOk(
         modo === "todas"
-          ? `Se asignaron ${result.updated} órdenes pendientes de ${titleCase(ciudad.ciudad)} a ${tecnico?.nombre ?? "el técnico"}.`
-          : `Se asignaron ${result.updated} órdenes libres de ${titleCase(ciudad.ciudad)}.`,
+          ? `Se asignaron ${result.updated} órdenes pendientes de ${sitio} a ${tecnico?.nombre ?? "el técnico"}.`
+          : `Se asignaron ${result.updated} órdenes libres de ${sitio}.`,
       );
       await load(tecnicoId, query);
     } catch (err) {
@@ -156,7 +167,7 @@ export function AsignacionDashboard() {
     }
   }
 
-  async function liberar(ciudad: CiudadAsignacion) {
+  async function liberar(lugar: { ciudad: string; colonia?: string }) {
     if (!tecnicoId) return;
     setSaving(true);
     setError(null);
@@ -166,10 +177,14 @@ export function AsignacionDashboard() {
         "/api/v1/asignaciones/liberar",
         {
           method: "POST",
-          body: JSON.stringify({ tecnicoId, ciudad: ciudad.ciudad }),
+          body: JSON.stringify({
+            tecnicoId,
+            ciudad: lugar.ciudad,
+            colonia: lugar.colonia,
+          }),
         },
       );
-      setOk(`Se liberaron ${result.updated} órdenes de ${titleCase(ciudad.ciudad)}.`);
+      setOk(`Se liberaron ${result.updated} órdenes de ${etiquetaLugar(lugar.ciudad, lugar.colonia)}.`);
       await load(tecnicoId, query);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo liberar");
@@ -178,20 +193,25 @@ export function AsignacionDashboard() {
     }
   }
 
-  function confirmarAsignar(ciudad: CiudadAsignacion, modo: "libres" | "todas") {
+  function confirmarAsignar(
+    lugar: { ciudad: string; colonia?: string; total: number; libres: number },
+    modo: "libres" | "todas",
+  ) {
     if (!tecnico) return;
-    const cantidad = modo === "libres" ? ciudad.libres : ciudad.total;
+    const cantidad = modo === "libres" ? lugar.libres : lugar.total;
+    const sitio = etiquetaLugar(lugar.ciudad, lugar.colonia);
+    const ambito = lugar.colonia !== undefined ? "barrio" : "ciudad";
     confirmDialog({
-      header: modo === "todas" ? "Asignar pendientes de la ciudad" : "Asignar órdenes libres",
+      header: modo === "todas" ? `Asignar pendientes del ${ambito}` : "Asignar órdenes libres",
       message:
         modo === "todas"
-          ? `¿Asignar las ${cantidad} órdenes pendientes de ${titleCase(ciudad.ciudad)} a ${tecnico.nombre}? Las ya recuperadas no se mueven.`
-          : `¿Asignar ${cantidad} órdenes pendientes sin técnico de ${titleCase(ciudad.ciudad)} a ${tecnico.nombre}?`,
+          ? `¿Asignar las ${cantidad} órdenes pendientes de ${sitio} a ${tecnico.nombre}? Las ya recuperadas no se mueven.`
+          : `¿Asignar ${cantidad} órdenes pendientes sin técnico de ${sitio} a ${tecnico.nombre}?`,
       icon: "pi pi-map-marker",
       acceptLabel: "Asignar",
       rejectLabel: "Cancelar",
       accept: () => {
-        void asignar(ciudad, modo);
+        void asignar(lugar, modo);
       },
     });
   }
@@ -219,23 +239,24 @@ export function AsignacionDashboard() {
     }
   }
 
-  function confirmarLiberar(ciudad: CiudadAsignacion) {
+  function confirmarLiberar(lugar: { ciudad: string; colonia?: string; asignadas: number }) {
     if (!tecnico) return;
+    const ambito = lugar.colonia !== undefined ? "barrio" : "ciudad";
     confirmDialog({
-      header: "Quitar ciudad",
-      message: `¿Quitar las ${ciudad.asignadas} órdenes pendientes de ${titleCase(ciudad.ciudad)} a ${tecnico.nombre}? Las que él ya recuperó se quedan en su lista.`,
+      header: `Quitar ${ambito}`,
+      message: `¿Quitar las ${lugar.asignadas} órdenes pendientes de ${etiquetaLugar(lugar.ciudad, lugar.colonia)} a ${tecnico.nombre}? Las que él ya recuperó se quedan en su lista.`,
       icon: "pi pi-times",
       acceptLabel: "Liberar",
       rejectLabel: "Cancelar",
       acceptClassName: "p-button-danger",
       accept: () => {
-        void liberar(ciudad);
+        void liberar(lugar);
       },
     });
   }
 
   return (
-    <AppShell title="Asignación" subtitle="Por ciudad o por orden">
+    <AppShell title="Asignación" subtitle="Por ciudad, barrio u orden">
       <ConfirmDialog />
       <AsignarOrdenDialog
         orden={asignarOrden}
@@ -262,6 +283,16 @@ export function AsignacionDashboard() {
           />
           <Button
             type="button"
+            label="Por barrio"
+            icon="pi pi-home"
+            outlined={vista !== "barrio"}
+            onClick={() => {
+              setQuery("");
+              setVista("barrio");
+            }}
+          />
+          <Button
+            type="button"
             label="Por orden"
             icon="pi pi-list"
             outlined={vista !== "orden"}
@@ -283,7 +314,7 @@ export function AsignacionDashboard() {
             void load(tecnicoId, query);
           }}
         >
-          {vista === "ciudad" ? (
+          {vista !== "orden" ? (
             <Dropdown
               value={tecnicoId}
               options={tecnicos.map((item) => ({
@@ -301,7 +332,13 @@ export function AsignacionDashboard() {
           <InputText
             value={query}
             className="w-full"
-            placeholder={vista === "orden" ? "Buscar orden, cliente, ciudad..." : "Filtrar ciudad..."}
+            placeholder={
+              vista === "orden"
+                ? "Buscar orden, cliente, ciudad..."
+                : vista === "barrio"
+                  ? "Filtrar ciudad o barrio..."
+                  : "Filtrar ciudad..."
+            }
             onChange={(event) => setQuery(event.target.value)}
           />
           <Button type="submit" label="Buscar" icon="pi pi-search" outlined />
@@ -318,12 +355,16 @@ export function AsignacionDashboard() {
               <strong>{tecnico.nombre}</strong> tiene{" "}
               <strong>{resumen?.totalAsignadas ?? 0}</strong> órdenes asignadas
               {tecnico.zona ? ` · zona ${titleCase(tecnico.zona)}` : ""}.
-              Asigna una ciudad para pasarle las órdenes pendientes de ese lugar.
+              {vista === "barrio"
+                ? " Asigna un barrio para pasarle solo las órdenes pendientes de esa colonia."
+                : " Asigna una ciudad para pasarle las órdenes pendientes de ese lugar."}{" "}
               Las que ya están recuperadas no se mueven y solo las ve quien las recuperó.
             </p>
           ) : (
             <p className="m-0 text-[var(--text-color-secondary)]">
-              Elige un técnico para asignarle las órdenes pendientes de una ciudad.
+              {vista === "barrio"
+                ? "Elige un técnico para asignarle las órdenes pendientes de un barrio."
+                : "Elige un técnico para asignarle las órdenes pendientes de una ciudad."}{" "}
               Las recuperadas no se reasignan.
             </p>
           )}
@@ -462,6 +503,98 @@ export function AsignacionDashboard() {
                 </div>
               </div>
             </>
+          ) : vista === "barrio" ? (
+          <DataTable
+            key={`barrio-${tecnicoId ?? "sin-tecnico"}`}
+            value={(resumen?.barrios ?? []).map((row) => ({
+              ...row,
+              id: `${row.ciudad}\0${row.colonia}`,
+            }))}
+            dataKey="id"
+            loading={loading || saving}
+            emptyMessage="No hay barrios con órdenes"
+            tableStyle={{ minWidth: "100%" }}
+            stripedRows
+          >
+            <Column
+              header="Ciudad"
+              style={{ width: "16%" }}
+              body={(row: BarrioAsignacion) => (
+                <strong>{titleCase(row.ciudad)}</strong>
+              )}
+            />
+            <Column
+              header="Barrio"
+              style={{ width: "18%" }}
+              body={(row: BarrioAsignacion) => titleCase(row.colonia) || "Sin barrio"}
+            />
+            <Column
+              header="Total"
+              style={{ width: "8%" }}
+              body={(row: BarrioAsignacion) => row.total}
+            />
+            <Column
+              header="Sin técnico"
+              style={{ width: "10%" }}
+              body={(row: BarrioAsignacion) =>
+                row.libres > 0 ? (
+                  <Tag value={String(row.libres)} severity="warning" />
+                ) : (
+                  "0"
+                )
+              }
+            />
+            <Column
+              header="Este técnico"
+              style={{ width: "10%" }}
+              body={(row: BarrioAsignacion) =>
+                row.asignadas > 0 ? (
+                  <Tag value={String(row.asignadas)} severity="success" />
+                ) : (
+                  "0"
+                )
+              }
+            />
+            <Column
+              header="Otro técnico"
+              style={{ width: "10%" }}
+              body={(row: BarrioAsignacion) =>
+                row.otras > 0 ? <Tag value={String(row.otras)} /> : "0"
+              }
+            />
+            <Column
+              header="Acciones"
+              style={{ width: "28%" }}
+              body={(row: BarrioAsignacion) => (
+                <div className="flex flex-wrap gap-1">
+                  <Button
+                    type="button"
+                    label="Asignar libres"
+                    size="small"
+                    disabled={!tecnicoId || row.libres === 0}
+                    onClick={() => confirmarAsignar(row, "libres")}
+                  />
+                  <Button
+                    type="button"
+                    label="Asignar pendientes"
+                    size="small"
+                    outlined
+                    disabled={!tecnicoId || row.total === 0}
+                    onClick={() => confirmarAsignar(row, "todas")}
+                  />
+                  <Button
+                    type="button"
+                    label="Liberar"
+                    size="small"
+                    text
+                    severity="danger"
+                    disabled={!tecnicoId || row.asignadas === 0}
+                    onClick={() => confirmarLiberar(row)}
+                  />
+                </div>
+              )}
+            />
+          </DataTable>
           ) : (
           <DataTable
             key={tecnicoId ?? "sin-tecnico"}

@@ -93,6 +93,15 @@ export interface CiudadAsignacion {
   otras: number;
 }
 
+export interface BarrioAsignacion {
+  ciudad: string;
+  colonia: string;
+  total: number;
+  libres: number;
+  asignadas: number;
+  otras: number;
+}
+
 export interface ResumenAsignacion {
   tecnico: {
     id: string;
@@ -102,6 +111,7 @@ export interface ResumenAsignacion {
   } | null;
   totalAsignadas: number;
   ciudades: CiudadAsignacion[];
+  barrios: BarrioAsignacion[];
 }
 
 export interface OrdenPayload {

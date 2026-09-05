@@ -24,6 +24,7 @@ export const asignarCiudadSchema = z.object({
     .trim()
     .min(2, "ciudad debe tener al menos 2 caracteres")
     .max(100),
+  colonia: z.string().trim().max(100).optional(),
   modo: z.enum(["libres", "todas"]).default("libres"),
 });
 
@@ -38,6 +39,7 @@ export const liberarCiudadSchema = z.object({
     .trim()
     .min(2, "ciudad debe tener al menos 2 caracteres")
     .max(100),
+  colonia: z.string().trim().max(100).optional(),
 });
 
 export type AsignacionQuery = z.infer<typeof asignacionQuerySchema>;

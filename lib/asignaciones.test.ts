@@ -14,6 +14,13 @@ describe("asignación por ciudad", () => {
     const serialized = JSON.stringify(where);
     assert.equal(serialized.includes("tecnicoId"), false);
   });
+
+  it("con barrio filtra ciudad y colonia", () => {
+    const where = whereAsignarCiudad("Tegucigalpa", "libres", "Kennedy");
+    const serialized = JSON.stringify(where);
+    assert.equal(serialized.includes("Kennedy"), true);
+    assert.equal(serialized.includes("Tegucigalpa"), true);
+  });
 });
 
 describe("asignación por orden", () => {
