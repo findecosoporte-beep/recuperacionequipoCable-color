@@ -31,7 +31,7 @@ import { accesoriosTexto, comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
 import { parseNombreCliente } from "@/lib/nombre-cliente";
 import {
   formatOrdenNumero,
-  formatTelefono,
+  telefonosFormateados,
   titleCase,
   visiblePages,
 } from "@/lib/format-orden";
@@ -415,9 +415,14 @@ export function EstadoDashboard() {
             <Column header="Ciudad" style={{ width: "12%" }} body={(row: Orden) => titleCase(row.ciudad)} />
             <Column header="Colonia" style={{ width: "12%" }} body={(row: Orden) => titleCase(row.colonia)} />
             <Column
-              header="Teléfono"
-              style={{ width: "11%" }}
-              body={(row: Orden) => formatTelefono(row.telefono)}
+              header="Teléfono 1"
+              style={{ width: "10%" }}
+              body={(row: Orden) => telefonosFormateados(row.telefono)[0]}
+            />
+            <Column
+              header="Teléfono 2"
+              style={{ width: "10%" }}
+              body={(row: Orden) => telefonosFormateados(row.telefono)[1]}
             />
             <Column
               header="Estado"

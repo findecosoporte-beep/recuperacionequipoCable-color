@@ -32,9 +32,14 @@ export function formatOrdenNumero(orden: string): string {
 const SEPARADOR_TELEFONOS = /(?:\s*[/,;|]\s*|\s+y\s+)/i;
 
 export function formatTelefono(telefono: string): string {
-  const numeros = telefonosDigitos(telefono);
+  const numeros = telefonosFormateados(telefono).filter((item) => item !== "—");
   if (numeros.length === 0) return telefono.trim() || "—";
-  return numeros.map(prettyPhone).join("  /  ");
+  return numeros.join("  /  ");
+}
+
+export function telefonosFormateados(telefono: string | null | undefined): [string, string] {
+  const numeros = telefono ? telefonosDigitos(telefono).map(prettyPhone) : [];
+  return [numeros[0] ?? "—", numeros[1] ?? "—"];
 }
 
 export function telefonosDigitos(telefono: string): string[] {

@@ -12,7 +12,7 @@ import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
 import { accesoriosTexto } from "@/lib/acuse";
 import { apiRequestWithMeta } from "@/lib/api-client";
-import { formatOrdenNumero, formatTelefono, titleCase, visiblePages } from "@/lib/format-orden";
+import { formatOrdenNumero, telefonosFormateados, titleCase, visiblePages } from "@/lib/format-orden";
 import { esRolPanel } from "@/lib/roles";
 import type { InfoAcuseRecibido } from "@/lib/types";
 
@@ -176,9 +176,14 @@ export function AcusesDashboard() {
               body={(row: InfoAcuseRecibido) => titleCase(row.colonia)}
             />
             <Column
-              header="Teléfono"
+              header="Teléfono 1"
               style={{ minWidth: "9rem" }}
-              body={(row: InfoAcuseRecibido) => formatTelefono(row.telefono)}
+              body={(row: InfoAcuseRecibido) => telefonosFormateados(row.telefono)[0]}
+            />
+            <Column
+              header="Teléfono 2"
+              style={{ minWidth: "9rem" }}
+              body={(row: InfoAcuseRecibido) => telefonosFormateados(row.telefono)[1]}
             />
           </DataTable>
           <div className="mt-3 flex flex-col gap-3 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
