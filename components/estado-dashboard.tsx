@@ -14,6 +14,7 @@ import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { MotivoAnulacionDialog } from "@/components/motivo-anulacion-dialog";
+import { WhatsAppPorRecuperarDialog } from "@/components/whatsapp-por-recuperar-dialog";
 import { RecuperadasPorSemana } from "@/components/recuperadas-por-semana";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import {
@@ -96,6 +97,7 @@ export function EstadoDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [recuperoOrden, setRecuperoOrden] = useState<Orden | null>(null);
   const [anularOrden, setAnularOrden] = useState<Orden | null>(null);
+  const [whatsappAbierto, setWhatsappAbierto] = useState(false);
   const [vista, setVista] = useState<"lista" | "semana">("lista");
   const [semanaInicio, setSemanaInicio] = useState(() => inicioSemanaYmd());
   const requestId = useRef(0);
@@ -284,6 +286,11 @@ export function EstadoDashboard() {
           void setAnulacion(anularOrden, "por_anular", motivo);
         }}
       />
+      <WhatsAppPorRecuperarDialog
+        visible={whatsappAbierto}
+        search={query}
+        onClose={() => setWhatsappAbierto(false)}
+      />
 
       <main className="mx-auto grid w-full flex-1 grid-cols-4 gap-4 px-4 py-6 sm:px-6">
         <form
@@ -336,6 +343,24 @@ export function EstadoDashboard() {
               icon="pi pi-calendar"
               outlined={vista !== "semana"}
               onClick={() => setVista("semana")}
+            />
+          </div>
+        ) : null}
+
+        {filtro === "por_recuperar" ? (
+          <div className="col-span-4 flex flex-col gap-3 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="m-0 font-semibold">Aviso por WhatsApp</p>
+              <p className="mt-1 mb-0 text-sm text-[var(--text-color-secondary)]">
+                Envía un mensaje a los clientes de esta lista, uno por uno.
+              </p>
+            </div>
+            <Button
+              type="button"
+              label="Enviar WhatsApp a por recuperar"
+              icon="pi pi-whatsapp"
+              severity="success"
+              onClick={() => setWhatsappAbierto(true)}
             />
           </div>
         ) : null}

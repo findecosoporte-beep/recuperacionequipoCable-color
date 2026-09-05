@@ -37,6 +37,12 @@ export function formatTelefono(telefono: string): string {
   return numeros.map(prettyPhone).join("  /  ");
 }
 
+export function telefonosDigitos(telefono: string): string[] {
+  const digits = telefono.replace(/\D/g, "");
+  if (!digits) return [];
+  return splitPhones(digits);
+}
+
 function splitPhones(digits: string): string[] {
   if (digits.length <= 12) return [digits];
   for (const code of ["504", "503", "502", "505", "506", "507"]) {
