@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { comentarioSinAcuse, decodeAcuse, extraerAcuse } from "./acuse";
+import { comentarioSinAcuse, decodeAcuse, extraerAcuse, htmlAcuse, incrustarAcuse } from "./acuse";
 
 describe("acuse", () => {
   it("extrae el JSON embebido en el comentario", () => {
@@ -30,5 +30,23 @@ describe("acuse", () => {
   it("rechaza un JSON sin datos de equipo ni cliente", () => {
     assert.equal(decodeAcuse("{}"), null);
     assert.equal(extraerAcuse("sin marcas"), null);
+  });
+
+  it("incrusta y vuelve a leer el acuse como en la app", () => {
+    const comentario = incrustarAcuse("Recuperó equipo: sí", {
+      cliente: "Maria Estela",
+      contrato: "93036922",
+      fecha: "5 de septiembre de 2026",
+      modemOnu: "SN-1",
+      router: "",
+      equipoDigital: "",
+      accesorios: { "Control Remoto": 1 },
+      nombreFirma: "Oficial",
+    });
+    const acuse = extraerAcuse(comentario);
+    assert.equal(acuse?.cliente, "Maria Estela");
+    assert.equal(acuse?.modemOnu, "SN-1");
+    assert.match(htmlAcuse(acuse!), /ISG COMMUNICATIONS/);
+    assert.match(htmlAcuse(acuse!), /Maria Estela/);
   });
 });

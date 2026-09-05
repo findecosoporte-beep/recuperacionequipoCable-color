@@ -14,6 +14,7 @@ import { esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { MotivoAnulacionDialog } from "@/components/motivo-anulacion-dialog";
+import { AcuseReciboDialog } from "@/components/acuse-recibo-dialog";
 import { WhatsAppEmpresaSelector } from "@/components/whatsapp-empresa-selector";
 import { WhatsAppOrdenButton } from "@/components/whatsapp-orden-button";
 import { WhatsAppPorRecuperarDialog } from "@/components/whatsapp-por-recuperar-dialog";
@@ -30,7 +31,15 @@ import {
   type EstadoAnulacion,
   type EstadoOrden,
 } from "@/lib/estado-orden";
-import { accesoriosTexto, comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
+import {
+  accesoriosTexto,
+  comentarioSinAcuse,
+  incrustarAcuse,
+  lineaEquiposAcuse,
+  resumenAcuse,
+  tieneAcuse,
+  type AcuseRecibido,
+} from "@/lib/acuse";
 import { parseNombreCliente } from "@/lib/nombre-cliente";
 import {
   formatOrdenNumero,
@@ -101,6 +110,7 @@ export function EstadoDashboard() {
   const [recuperoOrden, setRecuperoOrden] = useState<Orden | null>(null);
   const [anularOrden, setAnularOrden] = useState<Orden | null>(null);
   const [whatsappAbierto, setWhatsappAbierto] = useState(false);
+  const [acuseOrden, setAcuseOrden] = useState<Orden | null>(null);
   const [vista, setVista] = useState<"lista" | "semana">("lista");
   const [panel, setPanel] = useState<"ordenes" | "whatsapp">("ordenes");
   const [semanaInicio, setSemanaInicio] = useState(() => inicioSemanaYmd());
@@ -183,6 +193,27 @@ export function EstadoDashboard() {
       setFiltro("recuperada");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo marcar como recuperada");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function guardarAcuse(orden: Orden, acuse: AcuseRecibido) {
+    setSavingId(orden.id);
+    setError(null);
+    try {
+      const comentario = incrustarAcuse(
+        withEquiposRecuperados(withRecupero(orden.comentario, "si"), lineaEquiposAcuse(acuse)),
+        acuse,
+      );
+      await apiRequest<Orden>(`/api/v1/ordenes/${orden.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ comentario, estadoAnulacion: null }),
+      });
+      setAcuseOrden(null);
+      await load(meta.page, query, meta.limit, filtro);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar el acuse");
     } finally {
       setSavingId(null);
     }
@@ -296,6 +327,16 @@ export function EstadoDashboard() {
         search={query}
         onClose={() => setWhatsappAbierto(false)}
       />
+      <AcuseReciboDialog
+        orden={acuseOrden}
+        firma={user.nombre}
+        saving={Boolean(acuseOrden && savingId === acuseOrden.id)}
+        onClose={() => setAcuseOrden(null)}
+        onSave={(acuse) => {
+          if (!acuseOrden) return;
+          void guardarAcuse(acuseOrden, acuse);
+        }}
+      />
 
       <main className="mx-auto grid w-full flex-1 grid-cols-4 gap-4 px-4 py-6 sm:px-6">
         <form
@@ -405,6 +446,7 @@ export function EstadoDashboard() {
               onPrev={() => setSemanaInicio(sumarDiasYmd(semanaInicio, -7))}
               onNext={() => setSemanaInicio(sumarDiasYmd(semanaInicio, 7))}
               onHoy={() => setSemanaInicio(inicioSemanaYmd(ymdEnZona()))}
+              onAcuse={setAcuseOrden}
             />
           ) : (
             <>
@@ -600,6 +642,14 @@ export function EstadoDashboard() {
                   return (
                     <div className="flex flex-wrap gap-1">
                       <WhatsAppOrdenButton orden={row} />
+                      <Button
+                        type="button"
+                        label={tieneAcuse(row) ? "Ver acuse" : "Generar acuse"}
+                        size="small"
+                        text
+                        severity={tieneAcuse(row) ? "success" : undefined}
+                        onClick={() => setAcuseOrden(row)}
+                      />
                       <Button
                         type="button"
                         label="Quitar recuperada"

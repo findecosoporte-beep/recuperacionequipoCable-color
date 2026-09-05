@@ -10,6 +10,7 @@ import {
   sumarDiasYmd,
   ymdDeIso,
 } from "@/lib/fecha";
+import { tieneAcuse } from "@/lib/acuse";
 import { formatOrdenNumero, titleCase } from "@/lib/format-orden";
 import { parseNombreCliente } from "@/lib/nombre-cliente";
 import type { Orden } from "@/lib/types";
@@ -21,6 +22,7 @@ interface Props {
   onPrev: () => void;
   onNext: () => void;
   onHoy: () => void;
+  onAcuse: (orden: Orden) => void;
 }
 
 export function RecuperadasPorSemana({
@@ -30,6 +32,7 @@ export function RecuperadasPorSemana({
   onPrev,
   onNext,
   onHoy,
+  onAcuse,
 }: Props) {
   const dias = Array.from({ length: 7 }, (_, index) => {
     const ymd = sumarDiasYmd(semanaInicio, index);
@@ -101,6 +104,15 @@ export function RecuperadasPorSemana({
                       <span className="text-[var(--text-color-secondary)]">
                         {titleCase(orden.colonia)}, {titleCase(orden.ciudad)}
                       </span>
+                      <Button
+                        type="button"
+                        label={tieneAcuse(orden) ? "Ver acuse" : "Generar acuse"}
+                        icon="pi pi-file"
+                        size="small"
+                        text
+                        severity={tieneAcuse(orden) ? "success" : undefined}
+                        onClick={() => onAcuse(orden)}
+                      />
                     </li>
                   );
                 })}
