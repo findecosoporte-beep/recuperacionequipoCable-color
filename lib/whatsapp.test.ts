@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   destinosWhatsApp,
   enlaceWhatsAppOrden,
+  enlacesWhatsAppOrden,
   mensajeWhatsApp,
   numeroWhatsApp,
   numerosWhatsAppDe,
@@ -45,13 +46,16 @@ describe("whatsapp", () => {
     assert.deepEqual(destinos[0]?.ordenes, ["1001", "1002"]);
   });
 
-  it("usa solo el Teléfono 1 si hay dos números", () => {
+  it("usa el Teléfono 1 y el Teléfono 2 si hay dos números", () => {
     assert.equal(telefonoWhatsApp1("92763326 / 98755858"), "50492763326");
     const destinos = destinosWhatsApp([
       orden({ orden: "1001", cliente: "Ana Ruiz", telefono: "92763326 / 98755858" }),
     ]);
-    assert.equal(destinos.length, 1);
+    assert.equal(destinos.length, 2);
     assert.equal(destinos[0]?.wa, "50492763326");
+    assert.equal(destinos[0]?.etiqueta, "Teléfono 1");
+    assert.equal(destinos[1]?.wa, "50498755858");
+    assert.equal(destinos[1]?.etiqueta, "Teléfono 2");
   });
 
   it("arma el enlace de WhatsApp con el mensaje personalizado", () => {
@@ -62,6 +66,7 @@ describe("whatsapp", () => {
       ordenes: ["1001"],
       ciudad: "Tegucigalpa",
       colonia: "Kennedy",
+      etiqueta: "Teléfono 1",
     });
     assert.equal(texto, "Hola Ana Ruiz, orden 1001 en Tegucigalpa");
     assert.ok(urlWhatsApp("50499887766", texto).startsWith("https://wa.me/50499887766?text="));
@@ -78,12 +83,19 @@ describe("whatsapp", () => {
     assert.equal(url?.includes(encodeURIComponent("Cable Color")), false);
   });
 
-  it("arma el enlace de WhatsApp de una orden por el Teléfono 1", () => {
-    const url = enlaceWhatsAppOrden(
+  it("arma un enlace de WhatsApp por cada teléfono de la orden", () => {
+    const urls = enlacesWhatsAppOrden(
       orden({ orden: "1001", cliente: "Ana Ruiz", telefono: "92763326 / 98755858" }),
     );
-    assert.ok(url?.startsWith("https://wa.me/50492763326?text="));
-    assert.ok(url?.includes(encodeURIComponent("Ana Ruiz")));
+    assert.equal(urls.length, 2);
+    assert.ok(urls[0]?.startsWith("https://wa.me/50492763326?text="));
+    assert.ok(urls[1]?.startsWith("https://wa.me/50498755858?text="));
+    assert.ok(urls[0]?.includes(encodeURIComponent("Ana Ruiz")));
+    assert.ok(
+      enlaceWhatsAppOrden(
+        orden({ orden: "1001", cliente: "Ana Ruiz", telefono: "92763326 / 98755858" }),
+      )?.startsWith("https://wa.me/50492763326?text="),
+    );
     assert.equal(
       enlaceWhatsAppOrden(orden({ orden: "1002", cliente: "Sin numero", telefono: "123" })),
       null,

@@ -17,8 +17,8 @@ import { recordarAvisoHoy, useAvisosWhatsAppHoy } from "@/lib/whatsapp-hoy-clien
 import {
   destinosWhatsApp,
   mensajeWhatsApp,
+  numerosWhatsAppDe,
   plantillaPorEmpresa,
-  telefonoWhatsApp1,
   urlWhatsApp,
   type DestinoWhatsApp,
 } from "@/lib/whatsapp";
@@ -72,7 +72,7 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
 
         if (cancelled) return;
         setDestinos(destinosWhatsApp(ordenes));
-        setSinTelefono(ordenes.filter((item) => !telefonoWhatsApp1(item.telefono)).length);
+        setSinTelefono(ordenes.filter((item) => numerosWhatsAppDe(item.telefono).length === 0).length);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "No se pudieron cargar los teléfonos");
@@ -110,7 +110,7 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
       numeroOrden: actual.ordenes[0],
       cliente: actual.nombre,
     });
-    void registrarEnvioWhatsApp(actual.ordenId, empresa);
+    void registrarEnvioWhatsApp(actual.ordenId, empresa, actual.wa);
   }
 
   function confirmarSiYaSeEnvioHoy(despues: () => void) {
@@ -154,8 +154,8 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
     >
       <div className="grid gap-4">
         <p className="m-0 text-sm text-[var(--text-color-secondary)]">
-          Se abre el chat del <strong>Teléfono 1</strong> de cada cliente, con su nombre
-          y su orden ya puestos. Revisa, envía en WhatsApp y pasa al siguiente.
+          Se abre el chat de cada número (Teléfono 1 y Teléfono 2 si hay), con su
+          nombre y su orden ya puestos. Revisa, envía en WhatsApp y pasa al siguiente.
           {search.trim()
             ? " Se usan las órdenes de la búsqueda actual."
             : " Se usan todas las órdenes por recuperar."}
@@ -171,10 +171,10 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
         {!loading && !error ? (
           <p className="m-0 text-sm">
             {destinos.length === 0
-              ? "No hay Teléfono 1 válido en por recuperar."
-              : `${destinos.length} cliente${destinos.length === 1 ? "" : "s"} con Teléfono 1.`}
+              ? "No hay teléfonos válidos en por recuperar."
+              : `${destinos.length} número${destinos.length === 1 ? "" : "s"} de WhatsApp.`}
             {sinTelefono > 0
-              ? ` ${sinTelefono} ${sinTelefono === 1 ? "orden sin Teléfono 1 usable." : "órdenes sin Teléfono 1 usable."}`
+              ? ` ${sinTelefono} ${sinTelefono === 1 ? "orden sin teléfono usable." : "órdenes sin teléfono usable."}`
               : ""}
           </p>
         ) : null}
@@ -202,7 +202,7 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
             </p>
             <p className="mt-2 mb-0 font-semibold">{actual.nombre}</p>
             <p className="mt-1 mb-0 text-sm">
-              {formatTelefono(actual.wa)} ·{" "}
+              {actual.etiqueta} · {formatTelefono(actual.wa)} ·{" "}
               {actual.ordenes.map((item) => formatOrdenNumero(item)).join(", ")}
             </p>
             <p className="mt-2 mb-0 text-sm text-[var(--text-color-secondary)]">{preview}</p>

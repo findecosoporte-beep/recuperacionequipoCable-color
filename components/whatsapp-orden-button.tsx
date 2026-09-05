@@ -6,7 +6,11 @@ import { formatHora } from "@/lib/fecha";
 import { useEmpresaWhatsApp } from "@/lib/whatsapp-empresa";
 import { registrarEnvioWhatsApp } from "@/lib/whatsapp-envio";
 import { recordarAvisoHoy, useAvisosWhatsAppHoy } from "@/lib/whatsapp-hoy-client";
-import { enlaceWhatsAppOrden, plantillaPorEmpresa, telefonoWhatsApp1 } from "@/lib/whatsapp";
+import {
+  destinosWhatsApp,
+  enlacesWhatsAppOrden,
+  plantillaPorEmpresa,
+} from "@/lib/whatsapp";
 import type { Orden } from "@/lib/types";
 
 interface Props {
@@ -16,24 +20,31 @@ interface Props {
 export function WhatsAppOrdenButton({ orden }: Props) {
   const { empresa } = useEmpresaWhatsApp();
   const { avisoDe } = useAvisosWhatsAppHoy();
-  const url = enlaceWhatsAppOrden(orden, plantillaPorEmpresa(empresa));
-  const telefono = telefonoWhatsApp1(orden.telefono);
-  const avisoHoy = avisoDe({ ordenId: orden.id, telefono });
+  const destinos = destinosWhatsApp([orden]);
+  const urls = enlacesWhatsAppOrden(orden, plantillaPorEmpresa(empresa));
+  const avisoHoy = avisoDe({
+    ordenId: orden.id,
+    telefono: destinos[0]?.wa,
+  });
 
   function enviar() {
-    if (!url || !telefono) return;
-    window.open(url, "_blank", "noopener,noreferrer");
-    recordarAvisoHoy({
-      ordenId: orden.id,
-      telefono,
-      numeroOrden: orden.orden,
-      cliente: orden.cliente,
-    });
+    if (urls.length === 0) return;
+    for (const url of urls) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+    for (const destino of destinos) {
+      recordarAvisoHoy({
+        ordenId: orden.id,
+        telefono: destino.wa,
+        numeroOrden: orden.orden,
+        cliente: orden.cliente,
+      });
+    }
     void registrarEnvioWhatsApp(orden.id, empresa);
   }
 
   function onClick() {
-    if (!url) return;
+    if (urls.length === 0) return;
     if (!avisoHoy) {
       enviar();
       return;
@@ -51,16 +62,24 @@ export function WhatsAppOrdenButton({ orden }: Props) {
     });
   }
 
+  const varios = destinos.length > 1;
+
   return (
     <Button
       type="button"
-      label={avisoHoy ? "Enviado hoy" : "WhatsApp"}
+      label={avisoHoy ? "Enviado hoy" : varios ? `WhatsApp (${destinos.length})` : "WhatsApp"}
       icon="pi pi-whatsapp"
       size="small"
       text
       severity={avisoHoy ? "warning" : "success"}
-      disabled={!url}
-      title={avisoHoy ? "Ya se envió mensaje el día de hoy" : "Enviar WhatsApp"}
+      disabled={urls.length === 0}
+      title={
+        avisoHoy
+          ? "Ya se envió mensaje el día de hoy"
+          : varios
+            ? "Enviar WhatsApp al Teléfono 1 y al Teléfono 2"
+            : "Enviar WhatsApp"
+      }
       onClick={onClick}
     />
   );

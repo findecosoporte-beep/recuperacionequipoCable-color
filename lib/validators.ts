@@ -100,6 +100,7 @@ export type ListQuery = z.infer<typeof listQuerySchema>;
 export const avisoWhatsAppCreateSchema = z.object({
   ordenId: z.string().trim().min(1).max(40),
   empresa: z.enum(["isg", "cable_color"]),
+  telefono: z.string().trim().min(8).max(20).optional(),
 });
 
 export const avisoWhatsAppListSchema = z.object({

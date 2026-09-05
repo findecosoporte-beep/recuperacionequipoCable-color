@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db";
 import { limitesDiaUtc } from "@/lib/fecha";
-import { etiquetaEmpresa, esEmpresaWhatsApp, telefonoWhatsApp1 } from "@/lib/whatsapp";
+import {
+  etiquetaEmpresa,
+  esEmpresaWhatsApp,
+  numeroWhatsApp,
+  numerosWhatsAppDe,
+} from "@/lib/whatsapp";
 import { badRequest, notFound } from "@/lib/errors";
 
 export function serializeAviso(aviso: {
@@ -31,6 +36,7 @@ export function serializeAviso(aviso: {
 export async function registrarAvisoWhatsApp(input: {
   ordenId: string;
   empresa: string;
+  telefono?: string | null;
   enviadoPorId?: string | null;
 }) {
   if (!esEmpresaWhatsApp(input.empresa)) {
@@ -50,26 +56,42 @@ export async function registrarAvisoWhatsApp(input: {
     throw notFound("Orden no encontrada");
   }
 
-  const telefono = telefonoWhatsApp1(orden.telefono);
-  if (!telefono) {
-    throw badRequest("La orden no tiene Teléfono 1 válido");
+  const candidatos = numerosWhatsAppDe(orden.telefono);
+  if (candidatos.length === 0) {
+    throw badRequest("La orden no tiene un teléfono válido");
   }
 
-  const aviso = await prisma.avisoWhatsApp.create({
-    data: {
-      ordenId: orden.id,
-      numeroOrden: orden.orden,
-      cliente: orden.cliente,
-      telefono,
-      empresa: input.empresa,
-      enviadoPorId: input.enviadoPorId ?? null,
-    },
-    include: {
-      enviadoPor: { select: { nombre: true } },
-    },
-  });
+  let telefonos = candidatos;
+  if (input.telefono?.trim()) {
+    const pedido =
+      numeroWhatsApp(input.telefono.replace(/\D/g, "")) ??
+      numerosWhatsAppDe(input.telefono)[0] ??
+      null;
+    if (!pedido || !candidatos.includes(pedido)) {
+      throw badRequest("Ese teléfono no pertenece a la orden");
+    }
+    telefonos = [pedido];
+  }
 
-  return serializeAviso(aviso);
+  const avisos = await prisma.$transaction(
+    telefonos.map((telefono) =>
+      prisma.avisoWhatsApp.create({
+        data: {
+          ordenId: orden.id,
+          numeroOrden: orden.orden,
+          cliente: orden.cliente,
+          telefono,
+          empresa: input.empresa,
+          enviadoPorId: input.enviadoPorId ?? null,
+        },
+        include: {
+          enviadoPor: { select: { nombre: true } },
+        },
+      }),
+    ),
+  );
+
+  return avisos.map(serializeAviso);
 }
 
 export async function listAvisosWhatsApp(query: { desde: string; hasta: string }) {

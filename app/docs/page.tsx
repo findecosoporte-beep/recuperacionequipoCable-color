@@ -104,7 +104,8 @@ const endpoints = [
   {
     method: "POST",
     path: "/api/v1/avisos-whatsapp",
-    description: "Registra un aviso de WhatsApp. Body: ordenId, empresa (isg | cable_color).",
+    description:
+      "Registra avisos de WhatsApp. Body: ordenId, empresa (isg | cable_color), telefono opcional. Sin teléfono registra Teléfono 1 y Teléfono 2.",
   },
 ];
 

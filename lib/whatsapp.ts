@@ -32,6 +32,7 @@ export interface DestinoWhatsApp {
   ordenes: string[];
   ciudad: string;
   colonia: string;
+  etiqueta: string;
 }
 
 export function numeroWhatsApp(digits: string): string | null {
@@ -68,24 +69,27 @@ export function destinosWhatsApp(ordenes: Orden[]): DestinoWhatsApp[] {
   const porNumero = new Map<string, DestinoWhatsApp>();
 
   for (const orden of ordenes) {
-    const wa = telefonoWhatsApp1(orden.telefono);
-    if (!wa) continue;
     const { nombre } = parseNombreCliente(orden.cliente);
     const display = titleCase(nombre || orden.cliente);
-    const actual = porNumero.get(wa);
-    if (actual) {
-      if (!actual.ordenes.includes(orden.orden)) {
-        actual.ordenes.push(orden.orden);
+    const numeros = numerosWhatsAppDe(orden.telefono);
+
+    numeros.forEach((wa, index) => {
+      const actual = porNumero.get(wa);
+      if (actual) {
+        if (!actual.ordenes.includes(orden.orden)) {
+          actual.ordenes.push(orden.orden);
+        }
+        return;
       }
-      continue;
-    }
-    porNumero.set(wa, {
-      wa,
-      ordenId: orden.id,
-      nombre: display,
-      ordenes: [orden.orden],
-      ciudad: titleCase(orden.ciudad),
-      colonia: titleCase(orden.colonia),
+      porNumero.set(wa, {
+        wa,
+        ordenId: orden.id,
+        nombre: display,
+        ordenes: [orden.orden],
+        ciudad: titleCase(orden.ciudad),
+        colonia: titleCase(orden.colonia),
+        etiqueta: `Teléfono ${index + 1}`,
+      });
     });
   }
 
@@ -104,11 +108,18 @@ export function urlWhatsApp(wa: string, texto: string): string {
   return `https://wa.me/${wa}?text=${encodeURIComponent(texto)}`;
 }
 
+export function enlacesWhatsAppOrden(
+  orden: Orden,
+  plantilla = plantillaPorEmpresa(),
+): string[] {
+  return destinosWhatsApp([orden]).map((destino) =>
+    urlWhatsApp(destino.wa, mensajeWhatsApp(plantilla, destino)),
+  );
+}
+
 export function enlaceWhatsAppOrden(
   orden: Orden,
   plantilla = plantillaPorEmpresa(),
 ): string | null {
-  const destino = destinosWhatsApp([orden])[0];
-  if (!destino) return null;
-  return urlWhatsApp(destino.wa, mensajeWhatsApp(plantilla, destino));
+  return enlacesWhatsAppOrden(orden, plantilla)[0] ?? null;
 }
