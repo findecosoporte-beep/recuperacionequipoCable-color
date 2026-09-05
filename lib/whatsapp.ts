@@ -3,7 +3,7 @@ import { parseNombreCliente } from "@/lib/nombre-cliente";
 import type { Orden } from "@/lib/types";
 
 export const MENSAJE_POR_RECUPERAR =
-  "Hola {nombre}, le escribimos de Cable Color. Tenemos pendiente la recuperación de equipo de su servicio (orden {orden}) en {colonia}, {ciudad}. Un técnico pasará a recogerlo. Si ya lo entregó o tiene dudas, responda este mensaje. Gracias.";
+  "Le escribimos de Cable Color. Tenemos pendiente la recuperación de equipo de su servicio. Un técnico pasará a recogerlo. Si ya lo entregó o tiene dudas, responda este mensaje. Gracias.";
 
 export interface DestinoWhatsApp {
   wa: string;
@@ -38,28 +38,33 @@ export function numerosWhatsAppDe(telefono: string): string[] {
   return [...unicos];
 }
 
+export function telefonoWhatsApp1(telefono: string): string | null {
+  const primero = telefonosDigitos(telefono)[0];
+  return primero ? numeroWhatsApp(primero) : null;
+}
+
 export function destinosWhatsApp(ordenes: Orden[]): DestinoWhatsApp[] {
   const porNumero = new Map<string, DestinoWhatsApp>();
 
   for (const orden of ordenes) {
+    const wa = telefonoWhatsApp1(orden.telefono);
+    if (!wa) continue;
     const { nombre } = parseNombreCliente(orden.cliente);
     const display = titleCase(nombre || orden.cliente);
-    for (const wa of numerosWhatsAppDe(orden.telefono)) {
-      const actual = porNumero.get(wa);
-      if (actual) {
-        if (!actual.ordenes.includes(orden.orden)) {
-          actual.ordenes.push(orden.orden);
-        }
-        continue;
+    const actual = porNumero.get(wa);
+    if (actual) {
+      if (!actual.ordenes.includes(orden.orden)) {
+        actual.ordenes.push(orden.orden);
       }
-      porNumero.set(wa, {
-        wa,
-        nombre: display,
-        ordenes: [orden.orden],
-        ciudad: titleCase(orden.ciudad),
-        colonia: titleCase(orden.colonia),
-      });
+      continue;
     }
+    porNumero.set(wa, {
+      wa,
+      nombre: display,
+      ordenes: [orden.orden],
+      ciudad: titleCase(orden.ciudad),
+      colonia: titleCase(orden.colonia),
+    });
   }
 
   return [...porNumero.values()];
@@ -75,4 +80,8 @@ export function mensajeWhatsApp(plantilla: string, destino: DestinoWhatsApp): st
 
 export function urlWhatsApp(wa: string, texto: string): string {
   return `https://wa.me/${wa}?text=${encodeURIComponent(texto)}`;
+}
+
+export function urlWhatsAppDifusion(texto: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(texto)}`;
 }

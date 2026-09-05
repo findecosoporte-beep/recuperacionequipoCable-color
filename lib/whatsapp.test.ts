@@ -5,7 +5,9 @@ import {
   mensajeWhatsApp,
   numeroWhatsApp,
   numerosWhatsAppDe,
+  telefonoWhatsApp1,
   urlWhatsApp,
+  urlWhatsAppDifusion,
 } from "./whatsapp";
 import type { Orden } from "./types";
 
@@ -42,7 +44,16 @@ describe("whatsapp", () => {
     assert.deepEqual(destinos[0]?.ordenes, ["1001", "1002"]);
   });
 
-  it("arma el enlace de WhatsApp con el mensaje", () => {
+  it("usa solo el Teléfono 1 si hay dos números", () => {
+    assert.equal(telefonoWhatsApp1("92763326 / 98755858"), "50492763326");
+    const destinos = destinosWhatsApp([
+      orden({ orden: "1001", cliente: "Ana Ruiz", telefono: "92763326 / 98755858" }),
+    ]);
+    assert.equal(destinos.length, 1);
+    assert.equal(destinos[0]?.wa, "50492763326");
+  });
+
+  it("arma el enlace de un solo mensaje para todos", () => {
     const texto = mensajeWhatsApp("Hola {nombre}, orden {orden} en {ciudad}", {
       wa: "50499887766",
       nombre: "Ana Ruiz",
@@ -52,5 +63,9 @@ describe("whatsapp", () => {
     });
     assert.equal(texto, "Hola Ana Ruiz, orden 1001 en Tegucigalpa");
     assert.ok(urlWhatsApp("50499887766", texto).startsWith("https://wa.me/50499887766?text="));
+    assert.equal(
+      urlWhatsAppDifusion("Aviso Cable Color"),
+      `https://wa.me/?text=${encodeURIComponent("Aviso Cable Color")}`,
+    );
   });
 });
