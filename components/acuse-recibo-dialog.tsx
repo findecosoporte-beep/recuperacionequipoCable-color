@@ -14,6 +14,7 @@ import {
   type AcuseRecibido,
 } from "@/lib/acuse";
 import { formatOrdenNumero } from "@/lib/format-orden";
+import { imprimirHtml } from "@/lib/imprimir-html";
 import type { Orden } from "@/lib/types";
 
 interface Props {
@@ -22,15 +23,6 @@ interface Props {
   saving: boolean;
   onClose: () => void;
   onSave: (acuse: AcuseRecibido) => void;
-}
-
-function imprimirHtml(html: string) {
-  const ventana = window.open("", "_blank", "noopener,noreferrer");
-  if (!ventana) return;
-  ventana.document.write(html);
-  ventana.document.close();
-  ventana.focus();
-  ventana.print();
 }
 
 export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Props) {
@@ -115,7 +107,11 @@ export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Pro
               label="Imprimir / PDF"
               icon="pi pi-print"
               severity="success"
-              onClick={() => imprimirHtml(preview)}
+              onClick={() => {
+                if (!imprimirHtml(preview)) {
+                  setError("No se pudo abrir la impresión. Prueba de nuevo.");
+                }
+              }}
             />
           </div>
 
