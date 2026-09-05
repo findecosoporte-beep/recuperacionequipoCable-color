@@ -27,6 +27,7 @@ export const MENSAJE_POR_RECUPERAR = plantillaPorEmpresa();
 
 export interface DestinoWhatsApp {
   wa: string;
+  ordenId: string;
   nombre: string;
   ordenes: string[];
   ciudad: string;
@@ -80,6 +81,7 @@ export function destinosWhatsApp(ordenes: Orden[]): DestinoWhatsApp[] {
     }
     porNumero.set(wa, {
       wa,
+      ordenId: orden.id,
       nombre: display,
       ordenes: [orden.orden],
       ciudad: titleCase(orden.ciudad),

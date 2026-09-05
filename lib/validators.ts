@@ -97,4 +97,14 @@ export const acuseListQuerySchema = z.object({
 export type OrdenCreateInput = z.infer<typeof ordenCreateSchema>;
 export type OrdenUpdateInput = z.infer<typeof ordenUpdateSchema>;
 export type ListQuery = z.infer<typeof listQuerySchema>;
+export const avisoWhatsAppCreateSchema = z.object({
+  ordenId: z.string().trim().min(1).max(40),
+  empresa: z.enum(["isg", "cable_color"]),
+});
+
+export const avisoWhatsAppListSchema = z.object({
+  desde: z.string().trim().min(10).max(10),
+  hasta: z.string().trim().min(10).max(10),
+});
+
 export type AcuseListQuery = z.infer<typeof acuseListQuerySchema>;

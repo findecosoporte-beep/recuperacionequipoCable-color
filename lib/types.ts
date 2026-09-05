@@ -138,3 +138,15 @@ export interface ApiSuccess<T> {
 }
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiErrorBody;
+
+export interface AvisoWhatsApp {
+  id: string;
+  ordenId: string | null;
+  numeroOrden: string;
+  cliente: string;
+  telefono: string;
+  empresa: "isg" | "cable_color";
+  empresaLabel: string;
+  enviadoPor: string;
+  createdAt: string;
+}

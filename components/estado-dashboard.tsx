@@ -17,6 +17,7 @@ import { MotivoAnulacionDialog } from "@/components/motivo-anulacion-dialog";
 import { WhatsAppEmpresaSelector } from "@/components/whatsapp-empresa-selector";
 import { WhatsAppOrdenButton } from "@/components/whatsapp-orden-button";
 import { WhatsAppPorRecuperarDialog } from "@/components/whatsapp-por-recuperar-dialog";
+import { WhatsAppPorSemana } from "@/components/whatsapp-por-semana";
 import { RecuperadasPorSemana } from "@/components/recuperadas-por-semana";
 import { apiRequest, apiRequestWithMeta } from "@/lib/api-client";
 import {
@@ -101,6 +102,7 @@ export function EstadoDashboard() {
   const [anularOrden, setAnularOrden] = useState<Orden | null>(null);
   const [whatsappAbierto, setWhatsappAbierto] = useState(false);
   const [vista, setVista] = useState<"lista" | "semana">("lista");
+  const [panel, setPanel] = useState<"ordenes" | "whatsapp">("ordenes");
   const [semanaInicio, setSemanaInicio] = useState(() => inicioSemanaYmd());
   const requestId = useRef(0);
   const filtroRef = useRef(filtro);
@@ -162,10 +164,11 @@ export function EstadoDashboard() {
       router.replace("/acceso-app");
       return;
     }
+    if (panel === "whatsapp") return;
     void load(1, query, meta.limit, filtro);
     // Recarga al entrar, al cambiar de filtro o de vista semanal.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, router, filtro, vista, semanaInicio]);
+  }, [ready, user, router, filtro, vista, semanaInicio, panel]);
 
   async function marcarRecuperada(orden: Orden, equipos: string) {
     setSavingId(orden.id);
@@ -318,19 +321,28 @@ export function EstadoDashboard() {
               type="button"
               label={item.label}
               icon={item.icon}
-              outlined={filtro !== item.id}
+              outlined={panel !== "ordenes" || filtro !== item.id}
               severity={item.severity}
               data-estado={item.id}
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                setPanel("ordenes");
                 setFiltro(item.id);
               }}
             />
           ))}
+          <Button
+            type="button"
+            label="Control WhatsApp"
+            icon="pi pi-whatsapp"
+            outlined={panel !== "whatsapp"}
+            severity="success"
+            onClick={() => setPanel("whatsapp")}
+          />
         </div>
 
-        {filtro === "recuperada" ? (
+        {panel === "ordenes" && filtro === "recuperada" ? (
           <div className="col-span-4 flex flex-wrap gap-2">
             <Button
               type="button"
@@ -353,7 +365,7 @@ export function EstadoDashboard() {
           <WhatsAppEmpresaSelector />
         </div>
 
-        {filtro === "por_recuperar" ? (
+        {panel === "ordenes" && filtro === "por_recuperar" ? (
           <div className="col-span-4 flex flex-col gap-3 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="m-0 font-semibold">Aviso por WhatsApp</p>
@@ -378,7 +390,14 @@ export function EstadoDashboard() {
         ) : null}
 
         <div className="col-span-4">
-          {filtro === "recuperada" && vista === "semana" ? (
+          {panel === "whatsapp" ? (
+            <WhatsAppPorSemana
+              semanaInicio={semanaInicio}
+              onPrev={() => setSemanaInicio(sumarDiasYmd(semanaInicio, -7))}
+              onNext={() => setSemanaInicio(sumarDiasYmd(semanaInicio, 7))}
+              onHoy={() => setSemanaInicio(inicioSemanaYmd(ymdEnZona()))}
+            />
+          ) : filtro === "recuperada" && vista === "semana" ? (
             <RecuperadasPorSemana
               items={items}
               semanaInicio={semanaInicio}

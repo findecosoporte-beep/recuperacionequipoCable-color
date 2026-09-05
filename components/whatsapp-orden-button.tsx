@@ -2,6 +2,7 @@
 
 import { Button } from "primereact/button";
 import { useEmpresaWhatsApp } from "@/lib/whatsapp-empresa";
+import { registrarEnvioWhatsApp } from "@/lib/whatsapp-envio";
 import { enlaceWhatsAppOrden, plantillaPorEmpresa } from "@/lib/whatsapp";
 import type { Orden } from "@/lib/types";
 
@@ -25,6 +26,7 @@ export function WhatsAppOrdenButton({ orden }: Props) {
       onClick={() => {
         if (!url) return;
         window.open(url, "_blank", "noopener,noreferrer");
+        void registrarEnvioWhatsApp(orden.id, empresa);
       }}
     />
   );

@@ -10,6 +10,7 @@ import { apiRequestWithMeta } from "@/lib/api-client";
 import { formatOrdenNumero, formatTelefono } from "@/lib/format-orden";
 import type { Orden } from "@/lib/types";
 import { useEmpresaWhatsApp } from "@/lib/whatsapp-empresa";
+import { registrarEnvioWhatsApp } from "@/lib/whatsapp-envio";
 import {
   destinosWhatsApp,
   mensajeWhatsApp,
@@ -96,6 +97,7 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
     if (!actual) return;
     window.open(urlWhatsApp(actual.wa, preview), "_blank", "noopener,noreferrer");
     setEnviados((prev) => (prev.includes(actual.wa) ? prev : [...prev, actual.wa]));
+    void registrarEnvioWhatsApp(actual.ordenId, empresa);
   }
 
   function abrirYSeguir() {

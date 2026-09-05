@@ -23,6 +23,7 @@ model Orden {
   recuperadoPorId String?   @map("recuperado_por_id")
   recuperadoPor   Usuario?  @relation("OrdenesRecuperadas", fields: [recuperadoPorId], references: [id], onDelete: SetNull)
   acuse           InfoAcuseRecibido?
+  avisosWhatsapp  AvisoWhatsApp[]
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -48,6 +49,7 @@ model Usuario {
   zona           String?
   ordenes        Orden[]  @relation("OrdenesAsignadas")
   recuperaciones Orden[]  @relation("OrdenesRecuperadas")
+  avisosWhatsapp AvisoWhatsApp[]
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -72,6 +74,24 @@ model InfoAcuseRecibido {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@map("info_acuse_recibido")
+}
+
+model AvisoWhatsApp {
+  id           String   @id @default(cuid())
+  ordenId      String?  @map("orden_id")
+  orden        Orden?   @relation(fields: [ordenId], references: [id], onDelete: SetNull)
+  numeroOrden  String   @map("numero_orden")
+  cliente      String
+  telefono     String
+  empresa      String
+  enviadoPorId String?  @map("enviado_por_id")
+  enviadoPor   Usuario? @relation(fields: [enviadoPorId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([ordenId])
+  @@index([enviadoPorId])
+  @@map("avisos_whatsapp")
 }
 
 model RateLimitBucket {

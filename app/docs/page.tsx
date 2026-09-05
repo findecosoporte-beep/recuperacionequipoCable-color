@@ -96,6 +96,16 @@ const endpoints = [
     path: "/api/v1/asignaciones/liberar",
     description: "Quita las órdenes de una ciudad al técnico indicado.",
   },
+  {
+    method: "GET",
+    path: "/api/v1/avisos-whatsapp",
+    description: "Control semanal de WhatsApp enviados. Query: desde, hasta (YYYY-MM-DD).",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/avisos-whatsapp",
+    description: "Registra un aviso de WhatsApp. Body: ordenId, empresa (isg | cable_color).",
+  },
 ];
 
 const fields = [

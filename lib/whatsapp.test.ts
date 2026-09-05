@@ -57,6 +57,7 @@ describe("whatsapp", () => {
   it("arma el enlace de WhatsApp con el mensaje personalizado", () => {
     const texto = mensajeWhatsApp("Hola {nombre}, orden {orden} en {ciudad}", {
       wa: "50499887766",
+      ordenId: "1001",
       nombre: "Ana Ruiz",
       ordenes: ["1001"],
       ciudad: "Tegucigalpa",
