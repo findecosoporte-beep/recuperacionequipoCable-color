@@ -402,17 +402,16 @@ export function EstadoDashboard() {
           </div>
         ) : null}
 
-        <div className="col-span-4">
-          <WhatsAppEmpresaSelector />
-        </div>
-
         {panel === "ordenes" && filtro === "por_recuperar" ? (
           <div className="col-span-4 flex flex-col gap-3 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="m-0 font-semibold">Aviso por WhatsApp</p>
               <p className="mt-1 mb-0 text-sm text-[var(--text-color-secondary)]">
-                Mensaje personalizado al Teléfono 1 de cada cliente, uno por uno.
+                Mensaje personalizado al Teléfono 1 y Teléfono 2 de cada cliente, uno por uno.
               </p>
+              <div className="mt-2">
+                <WhatsAppEmpresaSelector compact />
+              </div>
             </div>
             <Button
               type="button"
@@ -578,7 +577,6 @@ export function EstadoDashboard() {
                 if (filtro === "por_anular") {
                   return (
                     <div className="flex flex-wrap gap-1">
-                      <WhatsAppOrdenButton orden={row} />
                       <Button
                         type="button"
                         label="Anulada"
@@ -618,7 +616,6 @@ export function EstadoDashboard() {
                 if (filtro === "anulada") {
                   return (
                     <div className="flex flex-wrap gap-1">
-                      <WhatsAppOrdenButton orden={row} />
                     <Button
                       type="button"
                       label="Reabrir"
@@ -641,7 +638,6 @@ export function EstadoDashboard() {
                 if (filtro === "recuperada") {
                   return (
                     <div className="flex flex-wrap gap-1">
-                      <WhatsAppOrdenButton orden={row} />
                       <Button
                         type="button"
                         label={tieneAcuse(row) ? "Ver acuse" : "Generar acuse"}
