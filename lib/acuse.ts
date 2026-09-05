@@ -274,9 +274,9 @@ export function htmlAcuse(acuse: AcuseRecibido): string {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #000000;
-      margin: -28px -32px 18px;
-      padding: 16px 24px;
+      background: transparent;
+      margin: 0 0 12px;
+      padding: 0;
     }
     .logo-isg { height: 72px; width: auto; max-width: 100%; display: block; }
     h1 { text-align: center; font-size: 22px; margin: 8px 0 28px; color: #111111; }

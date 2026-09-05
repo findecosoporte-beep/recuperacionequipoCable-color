@@ -47,7 +47,7 @@ describe("acuse", () => {
     assert.equal(acuse?.cliente, "Maria Estela");
     assert.equal(acuse?.modemOnu, "SN-1");
     assert.match(htmlAcuse(acuse!), /logo-isg/);
-    assert.match(htmlAcuse(acuse!), /data:image\/webp/);
+    assert.match(htmlAcuse(acuse!), /data:image\/png/);
     assert.match(htmlAcuse(acuse!), /ISG Communications/);
     assert.match(htmlAcuse(acuse!), /Maria Estela/);
   });
