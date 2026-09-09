@@ -1,21 +1,33 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "primereact/button";
 import { Message } from "primereact/message";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
+import { apiRequest } from "@/lib/api-client";
 import { downloadPlantillaInformes, parseInformesExcel } from "@/lib/excel-informes";
 import {
   COLUMNAS,
   FIJAS,
   GRUPOS,
   type FilaInforme,
+  type InformeRecepcionActual,
 } from "@/lib/informes-tabla";
 import { esRolPanel } from "@/lib/roles";
 
 const FILAS_VACIAS = 12;
+
+function fechaCarga(iso: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString("es-MX", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
 
 export function InformesDashboard() {
   const router = useRouter();
@@ -23,9 +35,17 @@ export function InformesDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [filas, setFilas] = useState<FilaInforme[]>([]);
   const [archivo, setArchivo] = useState<string | null>(null);
+  const [guardadoEn, setGuardadoEn] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+
+  const aplicarCarga = useCallback((data: InformeRecepcionActual) => {
+    setFilas(data.filas);
+    setArchivo(data.archivo);
+    setGuardadoEn(data.createdAt);
+  }, []);
 
   useEffect(() => {
     if (!ready) return;
@@ -35,8 +55,31 @@ export function InformesDashboard() {
     }
     if (!esRolPanel(user.rol)) {
       router.replace("/acceso-app");
+      return;
     }
-  }, [ready, user, router]);
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    void apiRequest<InformeRecepcionActual>("/api/v1/informes-recepcion")
+      .then((data) => {
+        if (!cancelled) aplicarCarga(data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "No se pudo cargar el informe",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, user, router, aplicarCarga]);
 
   async function agregarArchivo(file: File) {
     setImporting(true);
@@ -47,11 +90,22 @@ export function InformesDashboard() {
         throw new Error("El Excel no puede superar 8 MB");
       }
       const parsed = await parseInformesExcel(await file.arrayBuffer());
-      setFilas(parsed.filas);
-      setArchivo(file.name);
-      setOk(`Se cargaron ${parsed.filas.length} filas desde ${file.name}.`);
+      const saved = await apiRequest<InformeRecepcionActual>(
+        "/api/v1/informes-recepcion",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            archivo: file.name,
+            filas: parsed.filas,
+          }),
+        },
+      );
+      aplicarCarga(saved);
+      setOk(
+        `Se guardaron ${saved.total} filas de ${file.name} en la base de datos.`,
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo leer el Excel");
+      setError(err instanceof Error ? err.message : "No se pudo guardar el Excel");
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -67,6 +121,7 @@ export function InformesDashboard() {
   }
 
   const filasTabla = filas.length > 0 ? filas : Array.from({ length: FILAS_VACIAS }, () => ({}));
+  const fecha = fechaCarga(guardadoEn);
 
   return (
     <AppShell title="Informes generales" subtitle="Recuperación">
@@ -87,9 +142,10 @@ export function InformesDashboard() {
           <div className="mt-6 flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              label={importing ? "Cargando archivo..." : "Agregar archivo"}
+              label={importing ? "Guardando archivo..." : "Agregar archivo"}
               icon="pi pi-upload"
               loading={importing}
+              disabled={loading}
               onClick={() => fileInputRef.current?.click()}
             />
             <Button
@@ -100,7 +156,10 @@ export function InformesDashboard() {
               onClick={() => void downloadPlantillaInformes()}
             />
             {archivo ? (
-              <span className="text-sm text-[var(--text-color-secondary)]">{archivo}</span>
+              <span className="text-sm text-[var(--text-color-secondary)]">
+                {archivo}
+                {fecha ? ` · ${fecha}` : ""}
+              </span>
             ) : null}
             <input
               ref={fileInputRef}
@@ -126,43 +185,49 @@ export function InformesDashboard() {
           ) : null}
 
           <div className="informes-tabla-wrap">
-            <table className="informes-tabla">
-              <colgroup>
-                {COLUMNAS.map((col) => (
-                  <col key={col.key} style={{ width: col.width }} />
-                ))}
-              </colgroup>
-              <thead>
-                <tr>
-                  {FIJAS.map((col) => (
-                    <th key={col.key} rowSpan={2}>
-                      {col.label}
-                    </th>
+            {loading ? (
+              <p className="m-0 py-8 text-center text-[var(--text-color-secondary)]">
+                Cargando informe guardado...
+              </p>
+            ) : (
+              <table className="informes-tabla">
+                <colgroup>
+                  {COLUMNAS.map((col) => (
+                    <col key={col.key} style={{ width: col.width }} />
                   ))}
-                  {GRUPOS.map((grupo) => (
-                    <th key={grupo.label} colSpan={grupo.cols.length}>
-                      {grupo.label}
-                    </th>
-                  ))}
-                </tr>
-                <tr>
-                  {GRUPOS.flatMap((grupo) =>
-                    grupo.cols.map((col) => (
-                      <th key={col.key}>{col.label}</th>
-                    )),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {filasTabla.map((fila, index) => (
-                  <tr key={index}>
-                    {COLUMNAS.map((col) => (
-                      <td key={col.key}>{fila[col.key] ?? ""}</td>
+                </colgroup>
+                <thead>
+                  <tr>
+                    {FIJAS.map((col) => (
+                      <th key={col.key} rowSpan={2}>
+                        {col.label}
+                      </th>
+                    ))}
+                    {GRUPOS.map((grupo) => (
+                      <th key={grupo.label} colSpan={grupo.cols.length}>
+                        {grupo.label}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                  <tr>
+                    {GRUPOS.flatMap((grupo) =>
+                      grupo.cols.map((col) => (
+                        <th key={col.key}>{col.label}</th>
+                      )),
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filasTabla.map((fila, index) => (
+                    <tr key={index}>
+                      {COLUMNAS.map((col) => (
+                        <td key={col.key}>{fila[col.key] ?? ""}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </main>

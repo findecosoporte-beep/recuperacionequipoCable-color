@@ -53,6 +53,7 @@ model Usuario {
   recuperaciones Orden[]  @relation("OrdenesRecuperadas")
   avisosWhatsapp AvisoWhatsApp[]
   solicitudesAnulacion SolicitudAnulacion[]
+  informesRecepcion InformeRecepcionCarga[]
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -115,6 +116,32 @@ model SolicitudAnulacion {
   @@index([ordenId])
   @@index([solicitadoPorId])
   @@map("solicitudes_anulacion")
+}
+
+model InformeRecepcionCarga {
+  id          String                 @id @default(cuid())
+  archivo     String
+  filas       Int
+  subidoPorId String?                @map("subido_por_id")
+  subidoPor   Usuario?               @relation(fields: [subidoPorId], references: [id], onDelete: SetNull)
+  items       InformeRecepcionFila[]
+  createdAt   DateTime               @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([subidoPorId])
+  @@map("informes_recepcion_cargas")
+}
+
+model InformeRecepcionFila {
+  id       String                @id @default(cuid())
+  cargaId  String                @map("carga_id")
+  carga    InformeRecepcionCarga @relation(fields: [cargaId], references: [id], onDelete: Cascade)
+  posicion Int
+  datos    Json
+
+  @@index([cargaId])
+  @@index([cargaId, posicion])
+  @@map("informes_recepcion_filas")
 }
 
 model RateLimitBucket {

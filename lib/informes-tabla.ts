@@ -83,3 +83,31 @@ export const COLUMNAS: ColumnaInforme[] = [
 ];
 
 export type FilaInforme = Record<string, string>;
+
+export interface InformeRecepcionActual {
+  archivo: string | null;
+  createdAt: string | null;
+  total: number;
+  filas: FilaInforme[];
+}
+
+export const CLAVES_INFORME = COLUMNAS.map((col) => col.key);
+
+const MAX_CELDA = 500;
+
+export function sanitizarFilasInforme(raw: unknown[]): FilaInforme[] {
+  return raw.map((item, index) => {
+    const source =
+      item && typeof item === "object" && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {};
+    const fila: FilaInforme = {};
+    for (const key of CLAVES_INFORME) {
+      const value = source[key];
+      fila[key] =
+        value == null ? "" : String(value).trim().slice(0, MAX_CELDA);
+    }
+    if (!fila.n) fila.n = String(index + 1);
+    return fila;
+  });
+}

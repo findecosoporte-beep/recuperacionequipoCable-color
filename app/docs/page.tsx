@@ -129,6 +129,18 @@ const endpoints = [
     description:
       "Reporte de recuperadas o por anular. Query: tipo (recuperadas | por_anular), desde, hasta, ciudad, q.",
   },
+  {
+    method: "GET",
+    path: "/api/v1/informes-recepcion",
+    description:
+      "Última carga del control de recepción de equipos (Excel). Devuelve archivo, fecha y filas.",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/informes-recepcion",
+    description:
+      "Guarda una carga nueva del informe. Body: archivo, filas (máx. 5000). El panel muestra la más reciente.",
+  },
 ];
 
 const fields = [
