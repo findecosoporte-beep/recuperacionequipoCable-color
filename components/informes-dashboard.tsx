@@ -120,7 +120,10 @@ export function InformesDashboard() {
     );
   }
 
-  const filasTabla = filas.length > 0 ? filas : Array.from({ length: FILAS_VACIAS }, () => ({}));
+  const filasTabla: FilaInforme[] =
+    filas.length > 0
+      ? filas
+      : Array.from({ length: FILAS_VACIAS }, (): FilaInforme => ({}));
   const fecha = fechaCarga(guardadoEn);
 
   return (
