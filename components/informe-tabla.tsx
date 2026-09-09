@@ -14,25 +14,51 @@ const PAGE_SIZE = 10;
 
 interface Props {
   filas: FilaInforme[];
+  page?: number;
+  total?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
 }
 
-export function InformeTabla({ filas }: Props) {
-  const [page, setPage] = useState(1);
-  const total = filas.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+export function InformeTabla({
+  filas,
+  page,
+  total,
+  totalPages,
+  onPageChange,
+}: Props) {
+  const server = Boolean(onPageChange);
+  const [pageLocal, setPageLocal] = useState(1);
 
   useEffect(() => {
-    setPage(1);
-  }, [filas]);
+    if (!server) setPageLocal(1);
+  }, [filas, server]);
 
-  const pageSafe = Math.min(page, totalPages);
+  const totalSafe = server ? (total ?? filas.length) : filas.length;
+  const pages = Math.max(
+    1,
+    server
+      ? (totalPages ?? (Math.ceil(totalSafe / PAGE_SIZE) || 1))
+      : (Math.ceil(totalSafe / PAGE_SIZE) || 1),
+  );
+  const pageSafe = Math.min(Math.max(server ? (page ?? 1) : pageLocal, 1), pages);
+
   const filasTabla = useMemo(() => {
-    if (total === 0) {
+    if (totalSafe === 0) {
       return Array.from({ length: PAGE_SIZE }, (): FilaInforme => ({}));
     }
+    if (server) return filas;
     const start = (pageSafe - 1) * PAGE_SIZE;
     return filas.slice(start, start + PAGE_SIZE);
-  }, [filas, pageSafe, total]);
+  }, [filas, pageSafe, server, totalSafe]);
+
+  function cambiarPagina(next: number) {
+    if (onPageChange) {
+      onPageChange(next);
+      return;
+    }
+    setPageLocal(next);
+  }
 
   return (
     <div>
@@ -75,11 +101,11 @@ export function InformeTabla({ filas }: Props) {
           </tbody>
         </table>
       </div>
-      {total > 0 ? (
+      {totalSafe > 0 ? (
         <div className="mt-3 flex flex-col gap-3 rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm">
-            Mostrando {Math.min((pageSafe - 1) * PAGE_SIZE + 1, total)}-
-            {Math.min(pageSafe * PAGE_SIZE, total)} de {total}
+            Mostrando {Math.min((pageSafe - 1) * PAGE_SIZE + 1, totalSafe)}-
+            {Math.min(pageSafe * PAGE_SIZE, totalSafe)} de {totalSafe}
           </span>
           <div className="flex flex-wrap items-center gap-1">
             <Button
@@ -88,9 +114,9 @@ export function InformeTabla({ filas }: Props) {
               size="small"
               outlined
               disabled={pageSafe <= 1}
-              onClick={() => setPage(pageSafe - 1)}
+              onClick={() => cambiarPagina(pageSafe - 1)}
             />
-            {visiblePages(pageSafe, totalPages).map((item, index) =>
+            {visiblePages(pageSafe, pages).map((item, index) =>
               item === "…" ? (
                 <span key={`ellipsis-${index}`} className="px-2">
                   …
@@ -102,7 +128,7 @@ export function InformeTabla({ filas }: Props) {
                   label={String(item)}
                   size="small"
                   outlined={item !== pageSafe}
-                  onClick={() => setPage(item)}
+                  onClick={() => cambiarPagina(item)}
                 />
               ),
             )}
@@ -111,8 +137,8 @@ export function InformeTabla({ filas }: Props) {
               label="Siguiente"
               size="small"
               outlined
-              disabled={pageSafe >= totalPages}
-              onClick={() => setPage(pageSafe + 1)}
+              disabled={pageSafe >= pages}
+              onClick={() => cambiarPagina(pageSafe + 1)}
             />
           </div>
         </div>

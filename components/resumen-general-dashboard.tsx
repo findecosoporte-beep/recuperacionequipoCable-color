@@ -1,16 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dropdown } from "primereact/dropdown";
 import { Message } from "primereact/message";
+import { InformeResumenBar } from "@/components/informe-resumen-bar";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
 import { apiRequest } from "@/lib/api-client";
+import { etiquetaPeriodo } from "@/lib/fecha";
 import { titleCase } from "@/lib/format-orden";
 import type {
   ResumenClienteGrupo,
   ResumenCodigosClientes,
+  ResumenEquipoPendiente,
 } from "@/lib/informes-resumen";
 import { esRolPanel } from "@/lib/roles";
 
@@ -20,28 +23,50 @@ export function ResumenGeneralDashboard() {
   const router = useRouter();
   const { user, ready } = useAuth();
   const [ciudad, setCiudad] = useState(TODAS);
+  const [tipoEquipo, setTipoEquipo] = useState(TODAS);
+  const [empresaEjecutora, setEmpresaEjecutora] = useState(TODAS);
   const [ciudades, setCiudades] = useState<string[]>([]);
+  const [tiposEquipo, setTiposEquipo] = useState<string[]>([]);
+  const [empresasEjecutoras, setEmpresasEjecutoras] = useState<string[]>([]);
   const [grupos, setGrupos] = useState<ResumenClienteGrupo[]>([]);
   const [total, setTotal] = useState(0);
+  const [pendiente, setPendiente] = useState<ResumenEquipoPendiente | null>(null);
   const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const cargar = useCallback(async (filtro: string) => {
+  const cargar = useCallback(
+    async (filtros: {
+      ciudad: string;
+      tipoEquipo: string;
+      empresaEjecutora: string;
+    }) => {
     setLoading(true);
     setError(null);
     try {
-      const suffix = filtro
-        ? `?ciudad=${encodeURIComponent(filtro)}`
-        : "";
-      const data = await apiRequest<ResumenCodigosClientes>(
-        `/api/v1/informes-recepcion/resumen-clientes${suffix}`,
-      );
-      setCiudades(data.ciudades);
-      setGrupos(data.grupos);
-      setTotal(data.total);
+      const params = new URLSearchParams();
+      if (filtros.ciudad) params.set("ciudad", filtros.ciudad);
+      if (filtros.tipoEquipo) params.set("tipoEquipo", filtros.tipoEquipo);
+      if (filtros.empresaEjecutora) {
+        params.set("empresaEjecutora", filtros.empresaEjecutora);
+      }
+      const suffix = params.toString() ? `?${params.toString()}` : "";
+      const [clientes, equipo] = await Promise.all([
+        apiRequest<ResumenCodigosClientes>(
+          `/api/v1/informes-recepcion/resumen-clientes${suffix}`,
+        ),
+        apiRequest<ResumenEquipoPendiente>(
+          `/api/v1/informes-recepcion/resumen-pendiente${suffix}`,
+        ),
+      ]);
+      setCiudades(clientes.ciudades.length ? clientes.ciudades : equipo.ciudades);
+      setTiposEquipo(clientes.tiposEquipo ?? []);
+      setEmpresasEjecutoras(clientes.empresasEjecutoras ?? []);
+      setGrupos(clientes.grupos);
+      setTotal(clientes.total);
+      setPendiente(equipo);
       setAbiertos(
-        Object.fromEntries(data.grupos.map((grupo) => [grupo.empresa, true])),
+        Object.fromEntries(clientes.grupos.map((grupo) => [grupo.empresa, true])),
       );
     } catch (err) {
       setError(
@@ -50,7 +75,8 @@ export function ResumenGeneralDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  },
+  []);
 
   useEffect(() => {
     if (!ready) return;
@@ -62,19 +88,8 @@ export function ResumenGeneralDashboard() {
       router.replace("/acceso-app");
       return;
     }
-    void cargar(ciudad);
-  }, [ready, user, router, cargar, ciudad]);
-
-  const opcionesCiudad = useMemo(
-    () => [
-      { label: "All", value: TODAS },
-      ...ciudades.map((item) => ({
-        label: titleCase(item),
-        value: item,
-      })),
-    ],
-    [ciudades],
-  );
+    void cargar({ ciudad, tipoEquipo, empresaEjecutora });
+  }, [ready, user, router, cargar, ciudad, tipoEquipo, empresaEjecutora]);
 
   function toggleGrupo(empresa: string) {
     setAbiertos((actual) => ({
@@ -113,18 +128,96 @@ export function ResumenGeneralDashboard() {
             </div>
           ) : null}
 
-          <section className="resumen-clientes mt-8">
-            <h2 className="resumen-clientes-titulo">CÓDIGOS DE CLIENTES</h2>
+          <div className="mt-8 grid gap-3 md:grid-cols-3 md:items-end">
             <label className="resumen-clientes-filtro">
               <span>CIUDAD</span>
               <Dropdown
                 value={ciudad}
-                options={opcionesCiudad}
+                options={[
+                  { label: "All", value: TODAS },
+                  ...ciudades.map((item) => ({
+                    label: titleCase(item),
+                    value: item,
+                  })),
+                ]}
                 onChange={(event) => setCiudad(String(event.value ?? TODAS))}
                 className="w-full"
                 disabled={loading}
               />
             </label>
+            <label className="resumen-clientes-filtro">
+              <span>TIPO DE EQUIPO</span>
+              <Dropdown
+                value={tipoEquipo}
+                options={[
+                  { label: "All", value: TODAS },
+                  ...tiposEquipo.map((item) => ({
+                    label: item,
+                    value: item,
+                  })),
+                ]}
+                onChange={(event) => setTipoEquipo(String(event.value ?? TODAS))}
+                className="w-full"
+                disabled={loading}
+              />
+            </label>
+            <label className="resumen-clientes-filtro">
+              <span>EMPRESA EJECUTORA</span>
+              <Dropdown
+                value={empresaEjecutora}
+                options={[
+                  { label: "All", value: TODAS },
+                  ...empresasEjecutoras.map((item) => ({
+                    label: item,
+                    value: item,
+                  })),
+                ]}
+                onChange={(event) =>
+                  setEmpresaEjecutora(String(event.value ?? TODAS))
+                }
+                className="w-full"
+                disabled={loading}
+              />
+            </label>
+          </div>
+
+          <section className="mt-6">
+            <h2 className="resumen-clientes-titulo">EQUIPO PENDIENTE</h2>
+            {loading ? (
+              <p className="m-0 py-6 text-center text-[var(--text-color-secondary)]">
+                Cargando equipo pendiente...
+              </p>
+            ) : !pendiente || pendiente.periodos.length === 0 ? (
+              <p className="m-0 py-6 text-center text-[var(--text-color-secondary)]">
+                Aún no hay equipo pendiente para resumir.
+              </p>
+            ) : (
+              <div className="grid gap-5">
+                {pendiente.periodos.length > 1 ? (
+                  <article className="rounded-md border border-[var(--surface-200)] p-4">
+                    <h3 className="m-0 mb-3 text-sm font-semibold uppercase">
+                      Total
+                    </h3>
+                    <InformeResumenBar pendiente={pendiente.pendiente} />
+                  </article>
+                ) : null}
+                {pendiente.periodos.map((item) => (
+                  <article
+                    key={item.periodo}
+                    className="rounded-md border border-[var(--surface-200)] p-4"
+                  >
+                    <h3 className="m-0 mb-3 text-sm font-semibold uppercase">
+                      {etiquetaPeriodo(item.periodo)}
+                    </h3>
+                    <InformeResumenBar pendiente={item.pendiente} />
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="resumen-clientes mt-8">
+            <h2 className="resumen-clientes-titulo">CÓDIGOS DE CLIENTES</h2>
 
             {loading ? (
               <p className="m-0 py-8 text-center text-[var(--text-color-secondary)]">
