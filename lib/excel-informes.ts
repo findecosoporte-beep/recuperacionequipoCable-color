@@ -197,7 +197,7 @@ function indiceColumnaFecha(
   }
 
   const mappedScore = mapped == null ? 0 : score(mapped);
-  if (mappedScore >= 0.3) return mapped;
+  if (mapped != null && mappedScore >= 0.3) return mapped;
 
   let best = mapped ?? 1;
   let bestScore = mappedScore;
