@@ -30,9 +30,21 @@ export function InformesDashboard() {
   }
 
   return (
-    <AppShell title="Informes generales de recuperación" subtitle="Recuperación">
+    <AppShell title="Informes generales" subtitle="Recuperación">
       <main className="mx-auto grid w-full flex-1 grid-cols-4 gap-4 px-4 py-6 sm:px-6">
-        <div className="col-span-4 min-h-[28rem] rounded-md border border-[var(--surface-200)] bg-[var(--surface-0)]" />
+        <div className="col-span-4 min-h-[28rem] rounded-md border border-[var(--surface-200)] bg-white px-6 py-10">
+          <header className="text-center">
+            <p className="m-0 text-base uppercase tracking-wide text-[#5c2d91]">
+              CABLE COLOR
+            </p>
+            <h1 className="m-0 mt-1 text-2xl font-bold uppercase tracking-wide text-black sm:text-3xl">
+              ADMINISTRACION DE EQUIPOS
+            </h1>
+            <p className="m-0 mt-1 text-base uppercase tracking-wide text-black">
+              CONTROL DE RECEPCIÓN DE EQUIPOS
+            </p>
+          </header>
+        </div>
       </main>
     </AppShell>
   );
