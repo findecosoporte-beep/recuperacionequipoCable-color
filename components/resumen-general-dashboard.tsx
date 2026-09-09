@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Message } from "primereact/message";
 import { InformeResumenBar } from "@/components/informe-resumen-bar";
@@ -9,7 +9,6 @@ import { AppShell } from "@/components/app-shell";
 import { apiRequest } from "@/lib/api-client";
 import { etiquetaPeriodo } from "@/lib/fecha";
 import {
-  resumenPendienteDeItems,
   type InformeRecepcionActual,
   type InformeRecepcionCargaResumen,
 } from "@/lib/informes-tabla";
@@ -49,11 +48,6 @@ export function ResumenGeneralDashboard() {
     }
     void cargarLista();
   }, [ready, user, router, cargarLista]);
-
-  const total = useMemo(
-    () => resumenPendienteDeItems(cargas.map((carga) => carga.pendiente)),
-    [cargas],
-  );
 
   if (!ready || !user || !esRolPanel(user.rol)) {
     return (
@@ -96,12 +90,6 @@ export function ResumenGeneralDashboard() {
             </p>
           ) : (
             <div className="mt-6 grid gap-5">
-              <article className="rounded-md border border-[var(--surface-200)] p-4">
-                <h2 className="m-0 mb-3 text-base font-semibold uppercase">
-                  Total de todos los informes
-                </h2>
-                <InformeResumenBar pendiente={total} />
-              </article>
               {cargas.map((carga) => (
                 <article
                   key={carga.periodo}
