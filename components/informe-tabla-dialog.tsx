@@ -32,7 +32,9 @@ export function InformeTablaDialog({
       visible={open}
       modal
       maximizable
+      className="informe-tabla-dialog"
       style={{ width: "96vw", maxWidth: "96rem" }}
+      contentStyle={{ overflow: "hidden" }}
       header={titulo}
       onHide={onClose}
       footer={
