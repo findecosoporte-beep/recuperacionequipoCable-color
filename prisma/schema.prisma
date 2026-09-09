@@ -135,15 +135,92 @@ model InformeRecepcionCarga {
 }
 
 model InformeRecepcionFila {
-  id       String                @id @default(cuid())
-  cargaId  String                @map("carga_id")
-  carga    InformeRecepcionCarga @relation(fields: [cargaId], references: [id], onDelete: Cascade)
-  posicion Int
-  datos    Json
+  id             String   @id @default(cuid())
+  cargaId        String   @map("carga_id")
+  carga          InformeRecepcionCarga @relation(fields: [cargaId], references: [id], onDelete: Cascade)
+  posicion       Int
+  n              String   @default("")
+  fechaCliente   String   @default("") @map("fecha_cliente")
+  tipoEquipo     InformeRecepcionTipoEquipo?
+  datosCliente   InformeRecepcionDatosCliente?
+  datosEquipo    InformeRecepcionDatosEquipo?
+  datosRecepcion InformeRecepcionDatosRecepcion?
+  equipoPendiente InformeRecepcionEquipoPendiente?
 
   @@index([cargaId])
   @@index([cargaId, posicion])
   @@map("informes_recepcion_filas")
+}
+
+model InformeRecepcionTipoEquipo {
+  id             String               @id @default(cuid())
+  filaId         String               @unique @map("fila_id")
+  fila           InformeRecepcionFila @relation(fields: [filaId], references: [id], onDelete: Cascade)
+  cajaTvAnaloga  String               @default("") @map("caja_tv_analoga")
+  dtt            String               @default("")
+  dth            String               @default("")
+  modem          String               @default("")
+  ont            String               @default("")
+  router         String               @default("")
+  otros          String               @default("")
+  tipoEquipo     String               @default("") @map("tipo_equipo")
+  identificador  String               @default("")
+
+  @@map("informes_recepcion_tipo_equipo")
+}
+
+model InformeRecepcionDatosCliente {
+  id              String               @id @default(cuid())
+  filaId          String               @unique @map("fila_id")
+  fila            InformeRecepcionFila @relation(fields: [filaId], references: [id], onDelete: Cascade)
+  modelo          String               @default("")
+  codigoCliente   String               @default("") @map("codigo_cliente")
+  contratoAnulado String               @default("") @map("contrato_anulado")
+  numeroOrden     String               @default("") @map("numero_orden")
+
+  @@map("informes_recepcion_datos_cliente")
+}
+
+model InformeRecepcionDatosEquipo {
+  id          String               @id @default(cuid())
+  filaId      String               @unique @map("fila_id")
+  fila        InformeRecepcionFila @relation(fields: [filaId], references: [id], onDelete: Cascade)
+  serie       String               @default("")
+  codigoBarra String               @default("") @map("codigo_barra")
+  tarjeta     String               @default("")
+
+  @@map("informes_recepcion_datos_equipo")
+}
+
+model InformeRecepcionDatosRecepcion {
+  id               String               @id @default(cuid())
+  filaId           String               @unique @map("fila_id")
+  fila             InformeRecepcionFila @relation(fields: [filaId], references: [id], onDelete: Cascade)
+  tecnico          String               @default("")
+  empresaEjecutora String               @default("") @map("empresa_ejecutora")
+  procedencia      String               @default("")
+  ciudad           String               @default("")
+  region           String               @default("")
+  empresa          String               @default("")
+  supervisor       String               @default("")
+
+  @@map("informes_recepcion_datos_recepcion")
+}
+
+model InformeRecepcionEquipoPendiente {
+  id              String               @id @default(cuid())
+  filaId          String               @unique @map("fila_id")
+  fila            InformeRecepcionFila @relation(fields: [filaId], references: [id], onDelete: Cascade)
+  cajaTvAnalogaP  String               @default("") @map("caja_tv_analoga_p")
+  dttP            String               @default("") @map("dtt_p")
+  dthP            String               @default("") @map("dth_p")
+  modemP          String               @default("") @map("modem_p")
+  ontP            String               @default("") @map("ont_p")
+  routerP         String               @default("") @map("router_p")
+  otrosP          String               @default("") @map("otros_p")
+  totalP          String               @default("") @map("total_p")
+
+  @@map("informes_recepcion_equipo_pendiente")
 }
 
 model RateLimitBucket {

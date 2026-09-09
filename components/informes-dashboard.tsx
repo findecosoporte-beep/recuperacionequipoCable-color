@@ -97,8 +97,8 @@ export function InformesDashboard() {
     setError(null);
     setOk(null);
     try {
-      if (file.size > 8 * 1024 * 1024) {
-        throw new Error("El Excel no puede superar 8 MB");
+      if (file.size > 15 * 1024 * 1024) {
+        throw new Error("El Excel no puede superar 15 MB");
       }
       const parsed = await parseInformesExcel(await file.arrayBuffer());
       const saved = await apiRequest<InformeRecepcionActual>(

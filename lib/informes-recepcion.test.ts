@@ -9,6 +9,7 @@ import {
 import {
   cargasVigentesPorPeriodo,
   concatenarFilasInforme,
+  filaDesdeRelaciones,
   sanitizarFilasInforme,
 } from "./informes-tabla";
 
@@ -47,6 +48,26 @@ describe("informes recepción", () => {
         ["3", "C"],
       ],
     );
+  });
+
+  it("arma la fila desde las tablas de cada grupo", () => {
+    const fila = filaDesdeRelaciones({
+      n: "4",
+      fechaCliente: "01/09/2026",
+      tipoEquipo: { modem: "1", identificador: "ID-1" },
+      datosCliente: { numeroOrden: "1003" },
+      datosEquipo: { serie: "SN-99" },
+      datosRecepcion: { ciudad: "SPS" },
+      equipoPendiente: { totalP: "2" },
+    });
+    assert.equal(fila.n, "4");
+    assert.equal(fila.modem, "1");
+    assert.equal(fila.identificador, "ID-1");
+    assert.equal(fila.numeroOrden, "1003");
+    assert.equal(fila.serie, "SN-99");
+    assert.equal(fila.ciudad, "SPS");
+    assert.equal(fila.totalP, "2");
+    assert.equal(fila.tecnico, "");
   });
 
   it("deja la carga más reciente de cada mes", () => {

@@ -24,7 +24,7 @@ export const informeRecepcionCreateSchema = z.object({
   filas: z
     .array(z.record(z.string(), z.unknown()))
     .min(1, "El Excel no tiene filas")
-    .max(5000, "El Excel no puede superar 5000 filas"),
+    .max(8000, "El Excel no puede superar 8000 filas"),
 });
 
 export type InformeRecepcionCreateInput = z.infer<typeof informeRecepcionCreateSchema>;

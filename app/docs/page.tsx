@@ -139,7 +139,7 @@ const endpoints = [
     method: "POST",
     path: "/api/v1/informes-recepcion",
     description:
-      "Guarda o reemplaza un mes del informe. Body: archivo, filas (máx. 5000), periodo opcional (YYYY-MM). Los demás meses se conservan.",
+      "Guarda o reemplaza un mes del informe. Body: archivo, filas (máx. 8000), periodo opcional (YYYY-MM). Cada grupo (tipo de equipo, cliente, equipo, recepción y pendiente) se guarda en su tabla.",
   },
 ];
 

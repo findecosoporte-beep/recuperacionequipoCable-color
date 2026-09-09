@@ -146,3 +146,160 @@ export function cargasVigentesPorPeriodo<
   }
   return [...latest.values()].sort((a, b) => a.periodo.localeCompare(b.periodo));
 }
+
+function celda(fila: FilaInforme, key: string): string {
+  return fila[key] ?? "";
+}
+
+export interface InformeTipoEquipoCampos {
+  cajaTvAnaloga: string;
+  dtt: string;
+  dth: string;
+  modem: string;
+  ont: string;
+  router: string;
+  otros: string;
+  tipoEquipo: string;
+  identificador: string;
+}
+
+export interface InformeDatosClienteCampos {
+  modelo: string;
+  codigoCliente: string;
+  contratoAnulado: string;
+  numeroOrden: string;
+}
+
+export interface InformeDatosEquipoCampos {
+  serie: string;
+  codigoBarra: string;
+  tarjeta: string;
+}
+
+export interface InformeDatosRecepcionCampos {
+  tecnico: string;
+  empresaEjecutora: string;
+  procedencia: string;
+  ciudad: string;
+  region: string;
+  empresa: string;
+  supervisor: string;
+}
+
+export interface InformeEquipoPendienteCampos {
+  cajaTvAnalogaP: string;
+  dttP: string;
+  dthP: string;
+  modemP: string;
+  ontP: string;
+  routerP: string;
+  otrosP: string;
+  totalP: string;
+}
+
+export function tipoEquipoDeFila(fila: FilaInforme): InformeTipoEquipoCampos {
+  return {
+    cajaTvAnaloga: celda(fila, "cajaTvAnaloga"),
+    dtt: celda(fila, "dtt"),
+    dth: celda(fila, "dth"),
+    modem: celda(fila, "modem"),
+    ont: celda(fila, "ont"),
+    router: celda(fila, "router"),
+    otros: celda(fila, "otros"),
+    tipoEquipo: celda(fila, "tipoEquipo"),
+    identificador: celda(fila, "identificador"),
+  };
+}
+
+export function datosClienteDeFila(fila: FilaInforme): InformeDatosClienteCampos {
+  return {
+    modelo: celda(fila, "modelo"),
+    codigoCliente: celda(fila, "codigoCliente"),
+    contratoAnulado: celda(fila, "contratoAnulado"),
+    numeroOrden: celda(fila, "numeroOrden"),
+  };
+}
+
+export function datosEquipoDeFila(fila: FilaInforme): InformeDatosEquipoCampos {
+  return {
+    serie: celda(fila, "serie"),
+    codigoBarra: celda(fila, "codigoBarra"),
+    tarjeta: celda(fila, "tarjeta"),
+  };
+}
+
+export function datosRecepcionDeFila(fila: FilaInforme): InformeDatosRecepcionCampos {
+  return {
+    tecnico: celda(fila, "tecnico"),
+    empresaEjecutora: celda(fila, "empresaEjecutora"),
+    procedencia: celda(fila, "procedencia"),
+    ciudad: celda(fila, "ciudad"),
+    region: celda(fila, "region"),
+    empresa: celda(fila, "empresa"),
+    supervisor: celda(fila, "supervisor"),
+  };
+}
+
+export function equipoPendienteDeFila(fila: FilaInforme): InformeEquipoPendienteCampos {
+  return {
+    cajaTvAnalogaP: celda(fila, "cajaTvAnalogaP"),
+    dttP: celda(fila, "dttP"),
+    dthP: celda(fila, "dthP"),
+    modemP: celda(fila, "modemP"),
+    ontP: celda(fila, "ontP"),
+    routerP: celda(fila, "routerP"),
+    otrosP: celda(fila, "otrosP"),
+    totalP: celda(fila, "totalP"),
+  };
+}
+
+export function filaDesdeRelaciones(input: {
+  n: string;
+  fechaCliente: string;
+  tipoEquipo?: Partial<InformeTipoEquipoCampos> | null;
+  datosCliente?: Partial<InformeDatosClienteCampos> | null;
+  datosEquipo?: Partial<InformeDatosEquipoCampos> | null;
+  datosRecepcion?: Partial<InformeDatosRecepcionCampos> | null;
+  equipoPendiente?: Partial<InformeEquipoPendienteCampos> | null;
+}): FilaInforme {
+  const tipo = input.tipoEquipo ?? {};
+  const cliente = input.datosCliente ?? {};
+  const equipo = input.datosEquipo ?? {};
+  const recepcion = input.datosRecepcion ?? {};
+  const pendiente = input.equipoPendiente ?? {};
+  return {
+    n: input.n,
+    fechaCliente: input.fechaCliente,
+    cajaTvAnaloga: tipo.cajaTvAnaloga ?? "",
+    dtt: tipo.dtt ?? "",
+    dth: tipo.dth ?? "",
+    modem: tipo.modem ?? "",
+    ont: tipo.ont ?? "",
+    router: tipo.router ?? "",
+    otros: tipo.otros ?? "",
+    tipoEquipo: tipo.tipoEquipo ?? "",
+    identificador: tipo.identificador ?? "",
+    modelo: cliente.modelo ?? "",
+    codigoCliente: cliente.codigoCliente ?? "",
+    contratoAnulado: cliente.contratoAnulado ?? "",
+    numeroOrden: cliente.numeroOrden ?? "",
+    serie: equipo.serie ?? "",
+    codigoBarra: equipo.codigoBarra ?? "",
+    tarjeta: equipo.tarjeta ?? "",
+    tecnico: recepcion.tecnico ?? "",
+    empresaEjecutora: recepcion.empresaEjecutora ?? "",
+    procedencia: recepcion.procedencia ?? "",
+    ciudad: recepcion.ciudad ?? "",
+    region: recepcion.region ?? "",
+    empresa: recepcion.empresa ?? "",
+    supervisor: recepcion.supervisor ?? "",
+    cajaTvAnalogaP: pendiente.cajaTvAnalogaP ?? "",
+    dttP: pendiente.dttP ?? "",
+    dthP: pendiente.dthP ?? "",
+    modemP: pendiente.modemP ?? "",
+    ontP: pendiente.ontP ?? "",
+    routerP: pendiente.routerP ?? "",
+    otrosP: pendiente.otrosP ?? "",
+    totalP: pendiente.totalP ?? "",
+  };
+}

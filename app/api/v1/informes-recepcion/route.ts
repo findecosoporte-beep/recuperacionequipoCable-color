@@ -25,7 +25,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
 export const POST = apiHandler(async (request: NextRequest) => {
   const auth = await requirePanelAccess(request);
   const input = informeRecepcionCreateSchema.parse(
-    await readJson(request, { maxBytes: 4_000_000 }),
+    await readJson(request, { maxBytes: 16_000_000 }),
   );
   return json(
     await guardarInformeRecepcion({
