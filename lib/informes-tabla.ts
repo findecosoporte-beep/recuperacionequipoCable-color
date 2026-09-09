@@ -89,6 +89,7 @@ export interface InformeRecepcionCargaResumen {
   archivo: string;
   filas: number;
   createdAt: string;
+  pendiente: InformeResumenPendiente;
 }
 
 export interface InformeRecepcionActual {
@@ -195,6 +196,66 @@ export interface InformeEquipoPendienteCampos {
   routerP: string;
   otrosP: string;
   totalP: string;
+}
+
+export const COLUMNAS_RESUMEN_PENDIENTE = [
+  { key: "cajaTvAnalogaP", label: "CAJAS TV ANTERIORES_P" },
+  { key: "dthP", label: "OTT_P" },
+  { key: "dttP", label: "EKT_P" },
+  { key: "modemP", label: "MODEM_P" },
+  { key: "ontP", label: "ONU_P" },
+  { key: "routerP", label: "ROUTER_P" },
+  { key: "otrosP", label: "OTROS_P" },
+  { key: "totalP", label: "TOTAL_P" },
+] as const;
+
+export type ClaveResumenPendiente = (typeof COLUMNAS_RESUMEN_PENDIENTE)[number]["key"];
+
+export type InformeResumenPendiente = Record<ClaveResumenPendiente, string>;
+
+export function parseNumeroPendiente(value: string | null | undefined): number | null {
+  const raw = String(value ?? "").trim().replace(/,/g, "");
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function resumenPendienteDeItems(
+  items: Array<Partial<InformeEquipoPendienteCampos>>,
+): InformeResumenPendiente {
+  const sums: Record<ClaveResumenPendiente, number> = {
+    cajaTvAnalogaP: 0,
+    dthP: 0,
+    dttP: 0,
+    modemP: 0,
+    ontP: 0,
+    routerP: 0,
+    otrosP: 0,
+    totalP: 0,
+  };
+  const has: Record<ClaveResumenPendiente, boolean> = {
+    cajaTvAnalogaP: false,
+    dthP: false,
+    dttP: false,
+    modemP: false,
+    ontP: false,
+    routerP: false,
+    otrosP: false,
+    totalP: false,
+  };
+  for (const item of items) {
+    for (const col of COLUMNAS_RESUMEN_PENDIENTE) {
+      const n = parseNumeroPendiente(item[col.key]);
+      if (n == null) continue;
+      has[col.key] = true;
+      sums[col.key] += n;
+    }
+  }
+  const resumen = {} as InformeResumenPendiente;
+  for (const col of COLUMNAS_RESUMEN_PENDIENTE) {
+    resumen[col.key] = has[col.key] ? String(sums[col.key]) : "";
+  }
+  return resumen;
 }
 
 export function tipoEquipoDeFila(fila: FilaInforme): InformeTipoEquipoCampos {

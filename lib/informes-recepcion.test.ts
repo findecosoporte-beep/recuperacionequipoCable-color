@@ -12,6 +12,7 @@ import {
   cargasVigentesPorPeriodo,
   concatenarFilasInforme,
   filaDesdeRelaciones,
+  resumenPendienteDeItems,
   sanitizarFilasInforme,
 } from "./informes-tabla";
 
@@ -70,6 +71,21 @@ describe("informes recepción", () => {
     assert.equal(fila.ciudad, "SPS");
     assert.equal(fila.totalP, "2");
     assert.equal(fila.tecnico, "");
+  });
+
+  it("suma el resumen de equipo pendiente y deja vacías las columnas sin dato", () => {
+    const resumen = resumenPendienteDeItems([
+      { cajaTvAnalogaP: "100", dthP: "3", ontP: "2", routerP: "1", otrosP: "0", totalP: "80" },
+      { cajaTvAnalogaP: "7", dthP: "4", ontP: "2", totalP: "88" },
+    ]);
+    assert.equal(resumen.cajaTvAnalogaP, "107");
+    assert.equal(resumen.dthP, "7");
+    assert.equal(resumen.dttP, "");
+    assert.equal(resumen.modemP, "");
+    assert.equal(resumen.ontP, "4");
+    assert.equal(resumen.routerP, "1");
+    assert.equal(resumen.otrosP, "0");
+    assert.equal(resumen.totalP, "168");
   });
 
   it("deja la carga más reciente de cada mes", () => {

@@ -3,25 +3,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "primereact/button";
-import { Dropdown } from "primereact/dropdown";
 import { Message } from "primereact/message";
 import { InformeMesDialog } from "@/components/informe-mes-dialog";
+import { InformeResumenBar } from "@/components/informe-resumen-bar";
+import { InformeTablaDialog } from "@/components/informe-tabla-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
 import { apiRequest } from "@/lib/api-client";
 import { downloadPlantillaInformes, parseInformesExcel } from "@/lib/excel-informes";
 import { etiquetaPeriodo } from "@/lib/fecha";
 import {
-  COLUMNAS,
-  FIJAS,
-  GRUPOS,
   type FilaInforme,
   type InformeRecepcionActual,
+  type InformeRecepcionCargaResumen,
 } from "@/lib/informes-tabla";
 import { esRolPanel } from "@/lib/roles";
-
-const FILAS_VACIAS = 12;
-const TODOS = "";
 
 function fechaCarga(iso: string | null): string | null {
   if (!iso) return null;
@@ -38,45 +34,39 @@ export function InformesDashboard() {
   const { user, ready } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const periodoCargaRef = useRef("");
-  const [filas, setFilas] = useState<FilaInforme[]>([]);
-  const [archivo, setArchivo] = useState<string | null>(null);
-  const [guardadoEn, setGuardadoEn] = useState<string | null>(null);
+  const [cargas, setCargas] = useState<InformeRecepcionCargaResumen[]>([]);
   const [periodos, setPeriodos] = useState<string[]>([]);
-  const [periodoVista, setPeriodoVista] = useState(TODOS);
   const [periodoCarga, setPeriodoCarga] = useState("");
   const [mesDialogOpen, setMesDialogOpen] = useState(false);
+  const [tablaOpen, setTablaOpen] = useState(false);
+  const [tablaPeriodo, setTablaPeriodo] = useState<string | null>(null);
+  const [tablaArchivo, setTablaArchivo] = useState<string | null>(null);
+  const [tablaFilas, setTablaFilas] = useState<FilaInforme[]>([]);
+  const [tablaLoading, setTablaLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const aplicarCarga = useCallback((data: InformeRecepcionActual) => {
-    setFilas(data.filas);
-    setArchivo(data.archivo);
-    setGuardadoEn(data.createdAt);
+  const aplicarLista = useCallback((data: InformeRecepcionActual) => {
+    setCargas(data.cargas);
     setPeriodos(data.periodos);
   }, []);
 
-  const cargar = useCallback(
-    async (periodo: string) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const suffix = periodo ? `?periodo=${encodeURIComponent(periodo)}` : "";
-        const data = await apiRequest<InformeRecepcionActual>(
-          `/api/v1/informes-recepcion${suffix}`,
-        );
-        aplicarCarga(data);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "No se pudo cargar el informe",
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [aplicarCarga],
-  );
+  const cargarLista = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiRequest<InformeRecepcionActual>("/api/v1/informes-recepcion");
+      aplicarLista(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No se pudo cargar el informe",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [aplicarLista]);
 
   useEffect(() => {
     if (!ready) return;
@@ -88,14 +78,34 @@ export function InformesDashboard() {
       router.replace("/acceso-app");
       return;
     }
-    void cargar(TODOS);
-  }, [ready, user, router, cargar]);
+    void cargarLista();
+  }, [ready, user, router, cargarLista]);
 
   function confirmarMes(periodo: string) {
     periodoCargaRef.current = periodo;
     setPeriodoCarga(periodo);
     setMesDialogOpen(false);
     window.setTimeout(() => fileInputRef.current?.click(), 0);
+  }
+
+  async function abrirTabla(carga: InformeRecepcionCargaResumen) {
+    setTablaPeriodo(carga.periodo);
+    setTablaArchivo(carga.archivo);
+    setTablaFilas([]);
+    setTablaOpen(true);
+    setTablaLoading(true);
+    setError(null);
+    try {
+      const data = await apiRequest<InformeRecepcionActual>(
+        `/api/v1/informes-recepcion?periodo=${encodeURIComponent(carga.periodo)}`,
+      );
+      setTablaFilas(data.filas);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo abrir la tabla");
+      setTablaOpen(false);
+    } finally {
+      setTablaLoading(false);
+    }
   }
 
   async function agregarArchivo(file: File) {
@@ -118,14 +128,10 @@ export function InformesDashboard() {
           }),
         },
       );
-      aplicarCarga(saved);
-      setPeriodoVista(TODOS);
-      setMesDialogOpen(false);
+      aplicarLista(saved);
       const mes = etiquetaPeriodo(saved.periodoGuardado ?? periodoCarga);
       const deEsteMes = saved.filasDelPeriodo ?? parsed.filas.length;
-      setOk(
-        `Se guardó ${mes} (${deEsteMes} filas). El acumulado tiene ${saved.total} filas.`,
-      );
+      setOk(`Se guardó ${mes} (${deEsteMes} filas).`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar el Excel");
     } finally {
@@ -141,19 +147,6 @@ export function InformesDashboard() {
       </div>
     );
   }
-
-  const filasTabla: FilaInforme[] =
-    filas.length > 0
-      ? filas
-      : Array.from({ length: FILAS_VACIAS }, (): FilaInforme => ({}));
-  const fecha = fechaCarga(guardadoEn);
-  const opcionesVista = [
-    { label: "Todos los meses (acumulado)", value: TODOS },
-    ...periodos.map((periodo) => ({
-      label: etiquetaPeriodo(periodo),
-      value: periodo,
-    })),
-  ];
 
   return (
     <AppShell title="Informes generales" subtitle="Recuperación">
@@ -171,20 +164,7 @@ export function InformesDashboard() {
             </p>
           </header>
 
-          <div className="mt-6 flex flex-wrap items-end gap-2">
-            <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-sm sm:max-w-[16rem]">
-              <span className="text-[var(--text-color-secondary)]">Ver</span>
-              <Dropdown
-                value={periodoVista}
-                options={opcionesVista}
-                onChange={(event) => {
-                  const value = event.value ?? TODOS;
-                  setPeriodoVista(value);
-                  void cargar(value);
-                }}
-                className="w-full"
-              />
-            </label>
+          <div className="mt-6 flex flex-wrap items-center gap-2">
             <Button
               type="button"
               label={importing ? "Guardando archivo..." : "Agregar archivo"}
@@ -213,8 +193,8 @@ export function InformesDashboard() {
           </div>
 
           <p className="mt-3 mb-0 text-sm text-[var(--text-color-secondary)]">
-            Al agregar un archivo se pide el mes. Cada mes se suma al acumulado.
-            {archivo ? ` Último archivo: ${archivo}${fecha ? ` · ${fecha}` : ""}.` : ""}
+            Cada informe subido muestra el resumen de equipo pendiente. Pulsa
+            Ver tabla para abrir el detalle.
           </p>
 
           <InformeMesDialog
@@ -222,6 +202,14 @@ export function InformesDashboard() {
             periodos={periodos}
             onClose={() => setMesDialogOpen(false)}
             onConfirm={confirmarMes}
+          />
+          <InformeTablaDialog
+            open={tablaOpen}
+            periodo={tablaPeriodo}
+            archivo={tablaArchivo}
+            loading={tablaLoading}
+            filas={tablaFilas}
+            onClose={() => setTablaOpen(false)}
           />
 
           {error ? (
@@ -235,49 +223,44 @@ export function InformesDashboard() {
             </div>
           ) : null}
 
-          <div className="informes-tabla-wrap">
+          <div className="mt-6 grid gap-5">
             {loading ? (
               <p className="m-0 py-8 text-center text-[var(--text-color-secondary)]">
-                Cargando informe guardado...
+                Cargando informes...
+              </p>
+            ) : cargas.length === 0 ? (
+              <p className="m-0 py-8 text-center text-[var(--text-color-secondary)]">
+                Aún no hay informes. Agrega un archivo para ver el resumen.
               </p>
             ) : (
-              <table className="informes-tabla">
-                <colgroup>
-                  {COLUMNAS.map((col) => (
-                    <col key={col.key} style={{ width: col.width }} />
-                  ))}
-                </colgroup>
-                <thead>
-                  <tr>
-                    {FIJAS.map((col) => (
-                      <th key={col.key} rowSpan={2}>
-                        {col.label}
-                      </th>
-                    ))}
-                    {GRUPOS.map((grupo) => (
-                      <th key={grupo.label} colSpan={grupo.cols.length}>
-                        {grupo.label}
-                      </th>
-                    ))}
-                  </tr>
-                  <tr>
-                    {GRUPOS.flatMap((grupo) =>
-                      grupo.cols.map((col) => (
-                        <th key={col.key}>{col.label}</th>
-                      )),
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filasTabla.map((fila, index) => (
-                    <tr key={index}>
-                      {COLUMNAS.map((col) => (
-                        <td key={col.key}>{fila[col.key] ?? ""}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              cargas.map((carga) => (
+                <article
+                  key={carga.periodo}
+                  className="rounded-md border border-[var(--surface-200)] p-4"
+                >
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h2 className="m-0 text-base font-semibold uppercase">
+                        {etiquetaPeriodo(carga.periodo)}
+                      </h2>
+                      <p className="m-0 mt-1 text-sm text-[var(--text-color-secondary)]">
+                        {carga.archivo} · {carga.filas} filas
+                        {fechaCarga(carga.createdAt)
+                          ? ` · ${fechaCarga(carga.createdAt)}`
+                          : ""}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      label="Ver tabla"
+                      icon="pi pi-table"
+                      outlined
+                      onClick={() => void abrirTabla(carga)}
+                    />
+                  </div>
+                  <InformeResumenBar pendiente={carga.pendiente} />
+                </article>
+              ))
             )}
           </div>
         </div>
