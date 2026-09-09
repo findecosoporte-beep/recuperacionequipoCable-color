@@ -163,38 +163,3 @@ body:has(.ordenes-shell) {
   min-height: 0;
   overflow: auto;
 }
-
-.informes-tabla-wrap {
-  overflow: auto;
-  margin-top: 1.75rem;
-}
-
-.informes-tabla {
-  width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.informes-tabla th,
-.informes-tabla td {
-  border: 1px solid #7ecff0;
-  padding: 6px 8px;
-  font-size: 10px;
-  line-height: 1.25;
-  text-align: center;
-  vertical-align: middle;
-}
-
-.informes-tabla thead th {
-  background: #00aeef;
-  color: #fff;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.informes-tabla tbody td {
-  background: #fff;
-  height: 28px;
-}

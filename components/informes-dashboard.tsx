@@ -8,15 +8,17 @@ import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { DataTable } from "primereact/datatable";
 import { Message } from "primereact/message";
 import { InformeMesDialog } from "@/components/informe-mes-dialog";
-import { InformeTablaDialog } from "@/components/informe-tabla-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
 import { apiRequest } from "@/lib/api-client";
-import { downloadPlantillaInformes, parseInformesExcel } from "@/lib/excel-informes";
+import {
+  downloadInformeExcel,
+  downloadPlantillaInformes,
+  parseInformesExcel,
+} from "@/lib/excel-informes";
 import { etiquetaPeriodo, formatFechaHora, nombreMesDePeriodo } from "@/lib/fecha";
 import { titleCase } from "@/lib/format-orden";
 import {
-  type FilaInforme,
   type InformeRecepcionActual,
   type InformeRecepcionCargaResumen,
 } from "@/lib/informes-tabla";
@@ -31,13 +33,9 @@ export function InformesDashboard() {
   const [periodos, setPeriodos] = useState<string[]>([]);
   const [periodoCarga, setPeriodoCarga] = useState("");
   const [mesDialogOpen, setMesDialogOpen] = useState(false);
-  const [tablaOpen, setTablaOpen] = useState(false);
-  const [tablaPeriodo, setTablaPeriodo] = useState<string | null>(null);
-  const [tablaArchivo, setTablaArchivo] = useState<string | null>(null);
-  const [tablaFilas, setTablaFilas] = useState<FilaInforme[]>([]);
-  const [tablaLoading, setTablaLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -82,23 +80,23 @@ export function InformesDashboard() {
     window.setTimeout(() => fileInputRef.current?.click(), 0);
   }
 
-  async function abrirTabla(carga: InformeRecepcionCargaResumen) {
-    setTablaPeriodo(carga.periodo);
-    setTablaArchivo(carga.archivo);
-    setTablaFilas([]);
-    setTablaOpen(true);
-    setTablaLoading(true);
+  async function descargarInforme(carga: InformeRecepcionCargaResumen) {
+    setDownloading(carga.periodo);
     setError(null);
     try {
       const data = await apiRequest<InformeRecepcionActual>(
         `/api/v1/informes-recepcion?periodo=${encodeURIComponent(carga.periodo)}`,
       );
-      setTablaFilas(data.filas);
+      await downloadInformeExcel(
+        data.filas,
+        carga.archivo || `informe-${carga.periodo}.xlsx`,
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo abrir la tabla");
-      setTablaOpen(false);
+      setError(
+        err instanceof Error ? err.message : "No se pudo descargar el informe",
+      );
     } finally {
-      setTablaLoading(false);
+      setDownloading(null);
     }
   }
 
@@ -112,11 +110,6 @@ export function InformesDashboard() {
         { method: "DELETE" },
       );
       aplicarLista(data);
-      if (tablaPeriodo === carga.periodo) {
-        setTablaOpen(false);
-        setTablaFilas([]);
-        setTablaPeriodo(null);
-      }
       setOk(`Se eliminó el informe de ${etiquetaPeriodo(carga.periodo)}.`);
     } catch (err) {
       setError(
@@ -169,6 +162,8 @@ export function InformesDashboard() {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
+
+  const ocupado = Boolean(downloading || deleting);
 
   if (!ready || !user || !esRolPanel(user.rol)) {
     return (
@@ -224,8 +219,8 @@ export function InformesDashboard() {
           </div>
 
           <p className="mt-3 mb-0 text-sm text-[var(--text-color-secondary)]">
-            Gestiona los informes por mes. En Acciones puedes ver la tabla o
-            eliminar un informe.
+            Gestiona los informes por mes. En Acciones puedes descargar el Excel
+            o eliminar un informe.
           </p>
 
           <InformeMesDialog
@@ -233,14 +228,6 @@ export function InformesDashboard() {
             periodos={periodos}
             onClose={() => setMesDialogOpen(false)}
             onConfirm={confirmarMes}
-          />
-          <InformeTablaDialog
-            open={tablaOpen}
-            periodo={tablaPeriodo}
-            archivo={tablaArchivo}
-            loading={tablaLoading}
-            filas={tablaFilas}
-            onClose={() => setTablaOpen(false)}
           />
 
           {error ? (
@@ -307,11 +294,13 @@ export function InformesDashboard() {
                   <div className="flex flex-wrap gap-1">
                     <Button
                       type="button"
-                      label="Ver"
-                      icon="pi pi-table"
+                      label="Descargar"
+                      icon="pi pi-download"
                       size="small"
                       text
-                      onClick={() => void abrirTabla(row)}
+                      loading={downloading === row.periodo}
+                      disabled={ocupado}
+                      onClick={() => void descargarInforme(row)}
                     />
                     <Button
                       type="button"
@@ -321,7 +310,7 @@ export function InformesDashboard() {
                       text
                       severity="danger"
                       loading={deleting === row.periodo}
-                      disabled={Boolean(deleting)}
+                      disabled={ocupado}
                       onClick={() => confirmarEliminar(row)}
                     />
                   </div>

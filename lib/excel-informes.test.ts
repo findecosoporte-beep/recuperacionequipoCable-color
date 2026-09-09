@@ -25,4 +25,16 @@ describe("excel informes", () => {
     assert.equal(result.filas[0].serie, "SN-1");
     assert.equal(result.filas[0].cajaTvAnaloga, "1");
   });
+
+  it("arma el Excel del informe con encabezados y filas", async () => {
+    const { filasInformeAExcel } = await import("./excel-informes");
+    const rows = filasInformeAExcel([
+      { n: "1", numeroOrden: "1003", serie: "SN-1" },
+    ]);
+    assert.equal(rows.length, 3);
+    const data = rows[2] as string[];
+    assert.equal(data[0], "1");
+    assert.ok(data.includes("1003"));
+    assert.ok(data.includes("SN-1"));
+  });
 });

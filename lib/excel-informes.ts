@@ -175,16 +175,9 @@ export async function parseInformesExcel(buffer: ArrayBuffer): Promise<InformeEx
   return { filas };
 }
 
-export async function downloadPlantillaInformes(): Promise<void> {
-  const XLSX = await import("xlsx");
+export function filasInformeAExcel(filas: FilaInforme[] = []): unknown[][] {
   const grupoRow: string[] = [...FIJAS.map((col) => col.label)];
   const detalleRow: string[] = [...FIJAS.map(() => "")];
-  const merges: Array<{ s: { r: number; c: number }; e: { r: number; c: number } }> = [
-    { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
-    { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
-  ];
-
-  let colIndex = FIJAS.length;
   for (const grupo of GRUPOS) {
     grupoRow.push(grupo.label);
     detalleRow.push(grupo.cols[0]?.label ?? "");
@@ -192,16 +185,48 @@ export async function downloadPlantillaInformes(): Promise<void> {
       grupoRow.push("");
       detalleRow.push(grupo.cols[i].label);
     }
+  }
+
+  const dataRows = filas.map((fila) =>
+    COLUMNAS.map((col) => fila[col.key] ?? ""),
+  );
+  return [grupoRow, detalleRow, ...dataRows];
+}
+
+function mergesInformeExcel() {
+  const merges: Array<{ s: { r: number; c: number }; e: { r: number; c: number } }> = [
+    { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
+    { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
+  ];
+  let colIndex = FIJAS.length;
+  for (const grupo of GRUPOS) {
     merges.push({
       s: { r: 0, c: colIndex },
       e: { r: 0, c: colIndex + grupo.cols.length - 1 },
     });
     colIndex += grupo.cols.length;
   }
+  return merges;
+}
 
+async function descargarLibroInforme(filas: FilaInforme[], filename: string) {
+  const XLSX = await import("xlsx");
   const workbook = XLSX.utils.book_new();
-  const sheet = XLSX.utils.aoa_to_sheet([grupoRow, detalleRow]);
-  sheet["!merges"] = merges;
+  const sheet = XLSX.utils.aoa_to_sheet(filasInformeAExcel(filas));
+  sheet["!merges"] = mergesInformeExcel();
   XLSX.utils.book_append_sheet(workbook, sheet, "Recepcion");
-  XLSX.writeFile(workbook, "plantilla-control-recepcion.xlsx");
+  XLSX.writeFile(workbook, filename);
+}
+
+export async function downloadPlantillaInformes(): Promise<void> {
+  await descargarLibroInforme([], "plantilla-control-recepcion.xlsx");
+}
+
+export async function downloadInformeExcel(
+  filas: FilaInforme[],
+  filename: string,
+): Promise<void> {
+  const safe = filename.replace(/[\\/:*?"<>|]+/g, "-").trim() || "informe.xlsx";
+  const withExt = /\.xlsx?$/i.test(safe) ? safe : `${safe}.xlsx`;
+  await descargarLibroInforme(filas, withExt);
 }
