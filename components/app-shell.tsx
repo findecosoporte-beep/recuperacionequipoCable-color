@@ -69,6 +69,14 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
           router.push("/asignacion");
         },
       },
+      {
+        label: "Informes generales",
+        icon: "pi pi-book",
+        className: pathname === "/informes" ? "ordenes-menu-active" : undefined,
+        command: () => {
+          router.push("/informes");
+        },
+      },
     ],
     [pathname, router],
   );
