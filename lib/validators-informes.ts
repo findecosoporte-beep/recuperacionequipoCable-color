@@ -5,6 +5,15 @@ const periodoSchema = z
   .trim()
   .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "periodo inválido");
 
+export const informeResumenClientesSchema = z.object({
+  ciudad: z
+    .string()
+    .trim()
+    .max(100)
+    .optional()
+    .transform((value) => (value ? value : undefined)),
+});
+
 export const informeRecepcionListSchema = z.object({
   periodo: z
     .string()
