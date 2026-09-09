@@ -11,7 +11,6 @@ import {
   filaDesdeRelaciones,
   sanitizarFilasInforme,
   tipoEquipoDeFila,
-  resumenPendienteDeItems,
   type FilaInforme,
   type InformeDatosClienteCampos,
   type InformeDatosEquipoCampos,
@@ -109,30 +108,6 @@ export async function obtenerInformeRecepcion(
   });
   const vigentes = cargasVigentesPorPeriodo(todas);
   const periodos = vigentes.map((carga) => carga.periodo);
-  const ids = vigentes.map((carga) => carga.id);
-  const pendientes = ids.length
-    ? await prisma.informeRecepcionEquipoPendiente.findMany({
-        where: { fila: { cargaId: { in: ids } } },
-        select: {
-          cajaTvAnalogaP: true,
-          dttP: true,
-          dthP: true,
-          modemP: true,
-          ontP: true,
-          routerP: true,
-          otrosP: true,
-          totalP: true,
-          fila: { select: { cargaId: true } },
-        },
-      })
-    : [];
-
-  const pendientePorCarga = new Map<string, typeof pendientes>();
-  for (const item of pendientes) {
-    const lista = pendientePorCarga.get(item.fila.cargaId) ?? [];
-    lista.push(item);
-    pendientePorCarga.set(item.fila.cargaId, lista);
-  }
 
   const cargas: InformeRecepcionCargaResumen[] = [...vigentes]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
@@ -142,7 +117,6 @@ export async function obtenerInformeRecepcion(
       filas: carga.filas,
       createdAt: carga.createdAt.toISOString(),
       usuario: carga.subidoPor?.nombre ?? null,
-      pendiente: resumenPendienteDeItems(pendientePorCarga.get(carga.id) ?? []),
     }));
 
   if (!periodo) {

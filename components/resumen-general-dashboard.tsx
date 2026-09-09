@@ -1,40 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Message } from "primereact/message";
-import { InformeResumenBar } from "@/components/informe-resumen-bar";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
-import { apiRequest } from "@/lib/api-client";
-import { etiquetaPeriodo } from "@/lib/fecha";
-import {
-  type InformeRecepcionActual,
-  type InformeRecepcionCargaResumen,
-} from "@/lib/informes-tabla";
 import { esRolPanel } from "@/lib/roles";
 
 export function ResumenGeneralDashboard() {
   const router = useRouter();
   const { user, ready } = useAuth();
-  const [cargas, setCargas] = useState<InformeRecepcionCargaResumen[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const cargarLista = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiRequest<InformeRecepcionActual>("/api/v1/informes-recepcion");
-      setCargas(data.cargas);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "No se pudo cargar el resumen",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (!ready) return;
@@ -44,10 +18,8 @@ export function ResumenGeneralDashboard() {
     }
     if (!esRolPanel(user.rol)) {
       router.replace("/acceso-app");
-      return;
     }
-    void cargarLista();
-  }, [ready, user, router, cargarLista]);
+  }, [ready, user, router]);
 
   if (!ready || !user || !esRolPanel(user.rol)) {
     return (
@@ -72,40 +44,6 @@ export function ResumenGeneralDashboard() {
               CONTROL DE RECEPCIÓN DE EQUIPOS
             </p>
           </header>
-
-          {error ? (
-            <div className="mt-4">
-              <Message severity="error" text={error} />
-            </div>
-          ) : null}
-
-          {loading ? (
-            <p className="m-0 py-8 text-center text-[var(--text-color-secondary)]">
-              Cargando resumen...
-            </p>
-          ) : cargas.length === 0 ? (
-            <p className="m-0 py-8 text-center text-[var(--text-color-secondary)]">
-              Aún no hay informes para resumir. Sube un archivo en Informes
-              generales.
-            </p>
-          ) : (
-            <div className="mt-6 grid gap-5">
-              {cargas.map((carga) => (
-                <article
-                  key={carga.periodo}
-                  className="rounded-md border border-[var(--surface-200)] p-4"
-                >
-                  <h2 className="m-0 mb-1 text-base font-semibold uppercase">
-                    {etiquetaPeriodo(carga.periodo)}
-                  </h2>
-                  <p className="m-0 mb-3 text-sm text-[var(--text-color-secondary)]">
-                    {carga.archivo} · {carga.filas} filas
-                  </p>
-                  <InformeResumenBar pendiente={carga.pendiente} />
-                </article>
-              ))}
-            </div>
-          )}
         </div>
       </main>
     </AppShell>
