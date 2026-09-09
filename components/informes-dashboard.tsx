@@ -8,6 +8,7 @@ import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { DataTable } from "primereact/datatable";
 import { Message } from "primereact/message";
 import { InformeMesDialog } from "@/components/informe-mes-dialog";
+import { InformeTablaDialog } from "@/components/informe-tabla-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
 import { apiRequest } from "@/lib/api-client";
@@ -19,6 +20,7 @@ import {
 import { etiquetaPeriodo, formatFechaHora, nombreMesDePeriodo } from "@/lib/fecha";
 import { titleCase } from "@/lib/format-orden";
 import {
+  type FilaInforme,
   type InformeRecepcionActual,
   type InformeRecepcionCargaResumen,
 } from "@/lib/informes-tabla";
@@ -33,6 +35,11 @@ export function InformesDashboard() {
   const [periodos, setPeriodos] = useState<string[]>([]);
   const [periodoCarga, setPeriodoCarga] = useState("");
   const [mesDialogOpen, setMesDialogOpen] = useState(false);
+  const [tablaOpen, setTablaOpen] = useState(false);
+  const [tablaPeriodo, setTablaPeriodo] = useState<string | null>(null);
+  const [tablaArchivo, setTablaArchivo] = useState<string | null>(null);
+  const [tablaFilas, setTablaFilas] = useState<FilaInforme[]>([]);
+  const [tablaLoading, setTablaLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -80,6 +87,26 @@ export function InformesDashboard() {
     window.setTimeout(() => fileInputRef.current?.click(), 0);
   }
 
+  async function abrirTabla(carga: InformeRecepcionCargaResumen) {
+    setTablaPeriodo(carga.periodo);
+    setTablaArchivo(carga.archivo);
+    setTablaFilas([]);
+    setTablaOpen(true);
+    setTablaLoading(true);
+    setError(null);
+    try {
+      const data = await apiRequest<InformeRecepcionActual>(
+        `/api/v1/informes-recepcion?periodo=${encodeURIComponent(carga.periodo)}`,
+      );
+      setTablaFilas(data.filas);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo abrir el informe");
+      setTablaOpen(false);
+    } finally {
+      setTablaLoading(false);
+    }
+  }
+
   async function descargarInforme(carga: InformeRecepcionCargaResumen) {
     setDownloading(carga.periodo);
     setError(null);
@@ -110,6 +137,11 @@ export function InformesDashboard() {
         { method: "DELETE" },
       );
       aplicarLista(data);
+      if (tablaPeriodo === carga.periodo) {
+        setTablaOpen(false);
+        setTablaFilas([]);
+        setTablaPeriodo(null);
+      }
       setOk(`Se eliminó el informe de ${etiquetaPeriodo(carga.periodo)}.`);
     } catch (err) {
       setError(
@@ -219,8 +251,8 @@ export function InformesDashboard() {
           </div>
 
           <p className="mt-3 mb-0 text-sm text-[var(--text-color-secondary)]">
-            Gestiona los informes por mes. En Acciones puedes descargar el Excel
-            o eliminar un informe.
+            Gestiona los informes por mes. En Acciones puedes ver el informe,
+            descargar el Excel o eliminarlo.
           </p>
 
           <InformeMesDialog
@@ -228,6 +260,14 @@ export function InformesDashboard() {
             periodos={periodos}
             onClose={() => setMesDialogOpen(false)}
             onConfirm={confirmarMes}
+          />
+          <InformeTablaDialog
+            open={tablaOpen}
+            periodo={tablaPeriodo}
+            archivo={tablaArchivo}
+            loading={tablaLoading}
+            filas={tablaFilas}
+            onClose={() => setTablaOpen(false)}
           />
 
           {error ? (
@@ -292,6 +332,14 @@ export function InformesDashboard() {
                 style={{ width: "18%" }}
                 body={(row: InformeRecepcionCargaResumen) => (
                   <div className="flex flex-wrap gap-1">
+                    <Button
+                      type="button"
+                      label="Ver"
+                      icon="pi pi-table"
+                      size="small"
+                      text
+                      onClick={() => void abrirTabla(row)}
+                    />
                     <Button
                       type="button"
                       label="Descargar"
