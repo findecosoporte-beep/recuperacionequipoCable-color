@@ -54,6 +54,28 @@ describe("excel informes", () => {
     assert.equal(result.filas[1].fechaCliente, "10/09/2026");
   });
 
+  it("lee fechas de Excel aunque el encabezado de fecha quede vacío", async () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ["#", "", "CAJA TV ANALOGA", "Número Orden", "Serie"],
+      [1, "11/09/2026", "x", "1003", "SN-1"],
+      [2, "12/09/2026", "x", "1004", "SN-2"],
+      [3, "13/09/2026", "x", "1005", "SN-3"],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, sheet, "Recepcion");
+    const written = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
+    const bytes = written instanceof Uint8Array ? written : new Uint8Array(written as ArrayBuffer);
+    const buffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer;
+
+    const result = await parseInformesExcel(buffer);
+    assert.equal(result.filas[0].fechaCliente, "11/09/2026");
+    assert.equal(result.filas[1].fechaCliente, "12/09/2026");
+    assert.equal(result.filas[2].fechaCliente, "13/09/2026");
+  });
+
   it("arma el Excel del informe con encabezados y filas", async () => {
     const { filasInformeAExcel } = await import("./excel-informes");
     const rows = filasInformeAExcel([

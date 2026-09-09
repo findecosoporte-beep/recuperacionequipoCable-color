@@ -1,3 +1,4 @@
+import type { WorkSheet } from "xlsx";
 import {
   COLUMNAS,
   FIJAS,
@@ -127,7 +128,16 @@ function mapHeader(header: string): string | null {
   const trimmed = header.trim();
   if (!trimmed) return null;
   if (trimmed === "#") return "n";
-  return ALIAS[normalizeHeader(trimmed)] ?? null;
+  const normalized = normalizeHeader(trimmed);
+  if (!normalized) return null;
+  if (ALIAS[normalized]) return ALIAS[normalized];
+  if (
+    normalized.includes("FECHA") &&
+    (normalized.includes("CLIENTE") || normalized.includes("ENTREG"))
+  ) {
+    return "fechaCliente";
+  }
+  return null;
 }
 
 function contarEncabezados(row: unknown[]): number {
@@ -136,43 +146,125 @@ function contarEncabezados(row: unknown[]): number {
   }, 0);
 }
 
-function mappearColumnas(
-  headerRow: unknown[],
-  filaAnterior?: unknown[],
-): Map<string, number> {
+function mappearColumnas(headerRows: unknown[][]): Map<string, number> {
   const columns = new Map<string, number>();
-  const width = Math.max(headerRow.length, filaAnterior?.length ?? 0);
+  const width = headerRows.reduce((max, row) => Math.max(max, row.length), 0);
   for (let index = 0; index < width; index += 1) {
-    const fromHeader = mapHeader(cellToString(headerRow[index]));
-    const fromPrev = filaAnterior
-      ? mapHeader(cellToString(filaAnterior[index]))
-      : null;
-    const mapped = fromHeader ?? fromPrev;
-    if (mapped && !columns.has(mapped)) {
-      columns.set(mapped, index);
+    for (let r = headerRows.length - 1; r >= 0; r -= 1) {
+      const mapped = mapHeader(cellToString(headerRows[r]?.[index]));
+      if (mapped && !columns.has(mapped)) {
+        columns.set(mapped, index);
+        break;
+      }
     }
   }
+  if (!columns.has("n")) columns.set("n", 0);
+  if (!columns.has("fechaCliente")) columns.set("fechaCliente", 1);
   return columns;
+}
+
+function pareceFecha(value: unknown): boolean {
+  if (value instanceof Date && Number.isFinite(value.getTime())) return true;
+  if (typeof value === "number" && value >= 20_000 && value <= 80_000) return true;
+  const texto = String(value ?? "").trim();
+  if (!texto) return false;
+  if (/^\d{1,2}[/.\\-]\d{1,2}[/.\\-]\d{2,4}$/.test(texto)) return true;
+  if (/^\d{4}[/.\\-]\d{1,2}[/.\\-]\d{1,2}$/.test(texto)) return true;
+  return /(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)/i.test(texto);
+}
+
+function indiceColumnaFecha(
+  rows: unknown[][],
+  fromRow: number,
+  mapped: number | undefined,
+): number {
+  const data = rows
+    .slice(fromRow)
+    .filter((row) => contarEncabezados(row) < 3)
+    .slice(0, 50);
+  const width = data.reduce((max, row) => Math.max(max, row.length), 0);
+
+  function score(col: number): number {
+    let hits = 0;
+    let filled = 0;
+    for (const row of data) {
+      const value = row[col];
+      if (value == null || value === "") continue;
+      filled += 1;
+      if (pareceFecha(value)) hits += 1;
+    }
+    return filled >= 3 ? hits / filled : 0;
+  }
+
+  const mappedScore = mapped == null ? 0 : score(mapped);
+  if (mappedScore >= 0.3) return mapped;
+
+  let best = mapped ?? 1;
+  let bestScore = mappedScore;
+  for (let col = 0; col < Math.min(width, 8); col += 1) {
+    const current = score(col);
+    if (current > bestScore) {
+      bestScore = current;
+      best = col;
+    }
+  }
+  return bestScore >= 0.3 ? best : (mapped ?? 1);
+}
+
+function valorDeCelda(cell: { w?: string; t?: string; v?: unknown } | undefined): unknown {
+  if (!cell) return "";
+  const formatted = cell.w != null ? String(cell.w).trim() : "";
+  if (formatted && formatted !== "########") return formatted;
+  if (cell.t === "d") return cell.v;
+  if (cell.v == null) return "";
+  return cell.v;
+}
+
+function filasDeHoja(
+  utils: {
+    decode_range: (ref: string) => { s: { r: number; c: number }; e: { r: number; c: number } };
+    encode_cell: (addr: { r: number; c: number }) => string;
+  },
+  sheet: WorkSheet,
+): unknown[][] {
+  if (!sheet["!ref"]) return [];
+  const range = utils.decode_range(sheet["!ref"]);
+  const rows: unknown[][] = [];
+  for (let r = range.s.r; r <= range.e.r; r += 1) {
+    const row: unknown[] = [];
+    for (let c = range.s.c; c <= range.e.c; c += 1) {
+      const addr = utils.encode_cell({ r, c });
+      row.push(valorDeCelda(sheet[addr]));
+    }
+    rows.push(row);
+  }
+  return rows;
 }
 
 export async function parseInformesExcel(buffer: ArrayBuffer): Promise<InformeExcelResult> {
   const XLSX = await import("xlsx");
   const workbook = XLSX.read(new Uint8Array(buffer), {
     type: "array",
-    raw: false,
     cellDates: true,
+    cellText: true,
   });
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
+  if (workbook.SheetNames.length === 0) {
     throw new Error("El Excel no tiene hojas");
   }
 
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], {
-    header: 1,
-    defval: "",
-    raw: false,
-    blankrows: false,
-  });
+  let rows: unknown[][] = [];
+  let mejorHoja = -1;
+  for (const name of workbook.SheetNames) {
+    const candidatas = filasDeHoja(XLSX.utils, workbook.Sheets[name]);
+    const score = candidatas.reduce(
+      (max, row) => Math.max(max, contarEncabezados(row)),
+      -1,
+    );
+    if (score > mejorHoja) {
+      mejorHoja = score;
+      rows = candidatas;
+    }
+  }
 
   if (rows.length === 0) {
     throw new Error("El archivo está vacío");
@@ -194,9 +286,10 @@ export async function parseInformesExcel(buffer: ArrayBuffer): Promise<InformeEx
     );
   }
 
-  const columns = mappearColumnas(
-    rows[headerIndex],
-    headerIndex > 0 ? rows[headerIndex - 1] : undefined,
+  const columns = mappearColumnas(rows.slice(0, headerIndex + 1));
+  columns.set(
+    "fechaCliente",
+    indiceColumnaFecha(rows, headerIndex + 1, columns.get("fechaCliente")),
   );
 
   const filas: FilaInforme[] = [];
