@@ -11,6 +11,36 @@ export function ymdEnZona(date = new Date()): string {
   }).format(date);
 }
 
+export function periodoEnZona(date = new Date()): string {
+  return ymdEnZona(date).slice(0, 7);
+}
+
+export function esPeriodoValido(value: string): boolean {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+export function etiquetaPeriodo(periodo: string): string {
+  if (!esPeriodoValido(periodo)) return periodo;
+  const raw = new Intl.DateTimeFormat("es-HN", {
+    timeZone: ZONA_HORARIA,
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${periodo}-01T12:00:00-06:00`));
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+export function opcionesPeriodoCarga(existentes: string[] = []): string[] {
+  const actual = periodoEnZona();
+  const [year, month] = actual.split("-").map(Number);
+  const set = new Set(existentes.filter(esPeriodoValido));
+  for (let offset = -18; offset <= 1; offset += 1) {
+    const date = new Date(Date.UTC(year, month - 1 + offset, 1));
+    const periodo = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+    set.add(periodo);
+  }
+  return [...set].sort().reverse();
+}
+
 export function sumarDiasYmd(ymd: string, days: number): string {
   const date = new Date(`${ymd}T12:00:00-06:00`);
   date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);

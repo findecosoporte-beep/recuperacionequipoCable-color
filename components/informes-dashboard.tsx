@@ -3,11 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "primereact/button";
+import { Dropdown } from "primereact/dropdown";
 import { Message } from "primereact/message";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
 import { apiRequest } from "@/lib/api-client";
 import { downloadPlantillaInformes, parseInformesExcel } from "@/lib/excel-informes";
+import {
+  etiquetaPeriodo,
+  opcionesPeriodoCarga,
+  periodoEnZona,
+} from "@/lib/fecha";
 import {
   COLUMNAS,
   FIJAS,
@@ -18,6 +24,7 @@ import {
 import { esRolPanel } from "@/lib/roles";
 
 const FILAS_VACIAS = 12;
+const TODOS = "";
 
 function fechaCarga(iso: string | null): string | null {
   if (!iso) return null;
@@ -36,6 +43,9 @@ export function InformesDashboard() {
   const [filas, setFilas] = useState<FilaInforme[]>([]);
   const [archivo, setArchivo] = useState<string | null>(null);
   const [guardadoEn, setGuardadoEn] = useState<string | null>(null);
+  const [periodos, setPeriodos] = useState<string[]>([]);
+  const [periodoVista, setPeriodoVista] = useState(TODOS);
+  const [periodoCarga, setPeriodoCarga] = useState(periodoEnZona);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +55,29 @@ export function InformesDashboard() {
     setFilas(data.filas);
     setArchivo(data.archivo);
     setGuardadoEn(data.createdAt);
+    setPeriodos(data.periodos);
   }, []);
+
+  const cargar = useCallback(
+    async (periodo: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const suffix = periodo ? `?periodo=${encodeURIComponent(periodo)}` : "";
+        const data = await apiRequest<InformeRecepcionActual>(
+          `/api/v1/informes-recepcion${suffix}`,
+        );
+        aplicarCarga(data);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "No se pudo cargar el informe",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [aplicarCarga],
+  );
 
   useEffect(() => {
     if (!ready) return;
@@ -57,29 +89,8 @@ export function InformesDashboard() {
       router.replace("/acceso-app");
       return;
     }
-
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    void apiRequest<InformeRecepcionActual>("/api/v1/informes-recepcion")
-      .then((data) => {
-        if (!cancelled) aplicarCarga(data);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "No se pudo cargar el informe",
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, user, router, aplicarCarga]);
+    void cargar(TODOS);
+  }, [ready, user, router, cargar]);
 
   async function agregarArchivo(file: File) {
     setImporting(true);
@@ -96,13 +107,17 @@ export function InformesDashboard() {
           method: "POST",
           body: JSON.stringify({
             archivo: file.name,
+            periodo: periodoCarga,
             filas: parsed.filas,
           }),
         },
       );
       aplicarCarga(saved);
+      setPeriodoVista(TODOS);
+      const mes = etiquetaPeriodo(saved.periodoGuardado ?? periodoCarga);
+      const deEsteMes = saved.filasDelPeriodo ?? parsed.filas.length;
       setOk(
-        `Se guardaron ${saved.total} filas de ${file.name} en la base de datos.`,
+        `Se guardó ${mes} (${deEsteMes} filas). El acumulado tiene ${saved.total} filas.`,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar el Excel");
@@ -125,6 +140,18 @@ export function InformesDashboard() {
       ? filas
       : Array.from({ length: FILAS_VACIAS }, (): FilaInforme => ({}));
   const fecha = fechaCarga(guardadoEn);
+  const opcionesVista = [
+    { label: "Todos los meses (acumulado)", value: TODOS },
+    ...periodos.map((periodo) => ({
+      label: etiquetaPeriodo(periodo),
+      value: periodo,
+    })),
+  ];
+  const opcionesCarga = opcionesPeriodoCarga(periodos).map((periodo) => ({
+    label: etiquetaPeriodo(periodo),
+    value: periodo,
+  }));
+  const reemplazaMes = periodos.includes(periodoCarga);
 
   return (
     <AppShell title="Informes generales" subtitle="Recuperación">
@@ -142,7 +169,31 @@ export function InformesDashboard() {
             </p>
           </header>
 
-          <div className="mt-6 flex flex-wrap items-center gap-2">
+          <div className="mt-6 flex flex-wrap items-end gap-2">
+            <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-sm sm:max-w-[16rem]">
+              <span className="text-[var(--text-color-secondary)]">Ver</span>
+              <Dropdown
+                value={periodoVista}
+                options={opcionesVista}
+                onChange={(event) => {
+                  const value = event.value ?? TODOS;
+                  setPeriodoVista(value);
+                  void cargar(value);
+                }}
+                className="w-full"
+              />
+            </label>
+            <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-sm sm:max-w-[16rem]">
+              <span className="text-[var(--text-color-secondary)]">
+                Mes de este archivo
+              </span>
+              <Dropdown
+                value={periodoCarga}
+                options={opcionesCarga}
+                onChange={(event) => setPeriodoCarga(event.value ?? periodoEnZona())}
+                className="w-full"
+              />
+            </label>
             <Button
               type="button"
               label={importing ? "Guardando archivo..." : "Agregar archivo"}
@@ -158,12 +209,6 @@ export function InformesDashboard() {
               outlined
               onClick={() => void downloadPlantillaInformes()}
             />
-            {archivo ? (
-              <span className="text-sm text-[var(--text-color-secondary)]">
-                {archivo}
-                {fecha ? ` · ${fecha}` : ""}
-              </span>
-            ) : null}
             <input
               ref={fileInputRef}
               type="file"
@@ -175,6 +220,13 @@ export function InformesDashboard() {
               }}
             />
           </div>
+
+          <p className="mt-3 mb-0 text-sm text-[var(--text-color-secondary)]">
+            {reemplazaMes
+              ? `Si subes de nuevo ${etiquetaPeriodo(periodoCarga)}, se reemplaza solo ese mes. Los demás se quedan.`
+              : "Cada mes se suma al acumulado. Elige el mes del Excel antes de subirlo."}
+            {archivo ? ` Último archivo: ${archivo}${fecha ? ` · ${fecha}` : ""}.` : ""}
+          </p>
 
           {error ? (
             <div className="mt-4">

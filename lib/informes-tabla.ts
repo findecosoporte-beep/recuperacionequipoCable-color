@@ -84,11 +84,23 @@ export const COLUMNAS: ColumnaInforme[] = [
 
 export type FilaInforme = Record<string, string>;
 
+export interface InformeRecepcionCargaResumen {
+  periodo: string;
+  archivo: string;
+  filas: number;
+  createdAt: string;
+}
+
 export interface InformeRecepcionActual {
   archivo: string | null;
   createdAt: string | null;
   total: number;
   filas: FilaInforme[];
+  periodo: string | null;
+  periodos: string[];
+  cargas: InformeRecepcionCargaResumen[];
+  periodoGuardado?: string | null;
+  filasDelPeriodo?: number;
 }
 
 export const CLAVES_INFORME = COLUMNAS.map((col) => col.key);
@@ -110,4 +122,27 @@ export function sanitizarFilasInforme(raw: unknown[]): FilaInforme[] {
     if (!fila.n) fila.n = String(index + 1);
     return fila;
   });
+}
+
+export function concatenarFilasInforme(grupos: FilaInforme[][]): FilaInforme[] {
+  const filas: FilaInforme[] = [];
+  for (const grupo of grupos) {
+    for (const fila of grupo) {
+      filas.push({ ...fila, n: String(filas.length + 1) });
+    }
+  }
+  return filas;
+}
+
+export function cargasVigentesPorPeriodo<
+  T extends { periodo: string; createdAt: Date },
+>(cargas: T[]): T[] {
+  const latest = new Map<string, T>();
+  const ordenadas = cargas
+    .slice()
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  for (const carga of ordenadas) {
+    if (!latest.has(carga.periodo)) latest.set(carga.periodo, carga);
+  }
+  return [...latest.values()].sort((a, b) => a.periodo.localeCompare(b.periodo));
 }

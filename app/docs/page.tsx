@@ -133,13 +133,13 @@ const endpoints = [
     method: "GET",
     path: "/api/v1/informes-recepcion",
     description:
-      "Última carga del control de recepción de equipos (Excel). Devuelve archivo, fecha y filas.",
+      "Control de recepción de equipos. Query opcional: periodo (YYYY-MM). Sin periodo devuelve el acumulado de todos los meses.",
   },
   {
     method: "POST",
     path: "/api/v1/informes-recepcion",
     description:
-      "Guarda una carga nueva del informe. Body: archivo, filas (máx. 5000). El panel muestra la más reciente.",
+      "Guarda o reemplaza un mes del informe. Body: archivo, filas (máx. 5000), periodo opcional (YYYY-MM). Los demás meses se conservan.",
   },
 ];
 

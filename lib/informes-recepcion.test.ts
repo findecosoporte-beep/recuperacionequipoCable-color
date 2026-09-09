@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { sanitizarFilasInforme } from "./informes-tabla";
+import {
+  etiquetaPeriodo,
+  esPeriodoValido,
+  opcionesPeriodoCarga,
+  periodoEnZona,
+} from "./fecha";
+import {
+  cargasVigentesPorPeriodo,
+  concatenarFilasInforme,
+  sanitizarFilasInforme,
+} from "./informes-tabla";
 
 describe("informes recepción", () => {
   it("deja solo las columnas de la tabla y recorta celdas", () => {
@@ -22,5 +32,41 @@ describe("informes recepción", () => {
   it("numera la fila si el Excel no trae #", () => {
     const [fila] = sanitizarFilasInforme([{}]);
     assert.equal(fila.n, "1");
+  });
+
+  it("acumula meses y vuelve a numerar", () => {
+    const filas = concatenarFilasInforme([
+      [{ n: "1", serie: "A" }],
+      [{ n: "1", serie: "B" }, { n: "2", serie: "C" }],
+    ]);
+    assert.deepEqual(
+      filas.map((fila) => [fila.n, fila.serie]),
+      [
+        ["1", "A"],
+        ["2", "B"],
+        ["3", "C"],
+      ],
+    );
+  });
+
+  it("deja la carga más reciente de cada mes", () => {
+    const vigentes = cargasVigentesPorPeriodo([
+      { periodo: "2026-02", createdAt: new Date("2026-02-01T00:00:00Z"), id: "vieja" },
+      { periodo: "2026-01", createdAt: new Date("2026-01-10T00:00:00Z"), id: "enero" },
+      { periodo: "2026-02", createdAt: new Date("2026-02-20T00:00:00Z"), id: "nueva" },
+    ]);
+    assert.deepEqual(
+      vigentes.map((carga) => carga.id),
+      ["enero", "nueva"],
+    );
+  });
+
+  it("escribe el nombre del mes y arma opciones de carga", () => {
+    assert.equal(esPeriodoValido("2026-09"), true);
+    assert.equal(esPeriodoValido("2026-13"), false);
+    assert.match(etiquetaPeriodo("2026-09"), /septiembre/i);
+    const opciones = opcionesPeriodoCarga(["2024-01"]);
+    assert.ok(opciones.includes("2024-01"));
+    assert.ok(opciones.includes(periodoEnZona()));
   });
 });
