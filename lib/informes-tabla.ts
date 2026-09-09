@@ -84,12 +84,28 @@ export const COLUMNAS: ColumnaInforme[] = [
 
 export type FilaInforme = Record<string, string>;
 
+export const COLUMNAS_RESUMEN_PENDIENTE = [
+  { key: "cajaTvAnalogaP", label: "CAJAS TV ANTERIORES_P" },
+  { key: "dthP", label: "OTT_P" },
+  { key: "dttP", label: "EKT_P" },
+  { key: "modemP", label: "MODEM_P" },
+  { key: "ontP", label: "ONU_P" },
+  { key: "routerP", label: "ROUTER_P" },
+  { key: "otrosP", label: "OTROS_P" },
+  { key: "totalP", label: "TOTAL_P" },
+] as const;
+
+export type ClaveResumenPendiente = (typeof COLUMNAS_RESUMEN_PENDIENTE)[number]["key"];
+
+export type InformeResumenPendiente = Record<ClaveResumenPendiente, string>;
+
 export interface InformeRecepcionCargaResumen {
   periodo: string;
   archivo: string;
   filas: number;
   createdAt: string;
   usuario: string | null;
+  pendiente: InformeResumenPendiente;
 }
 
 export interface InformeRecepcionActual {
@@ -197,21 +213,6 @@ export interface InformeEquipoPendienteCampos {
   otrosP: string;
   totalP: string;
 }
-
-export const COLUMNAS_RESUMEN_PENDIENTE = [
-  { key: "cajaTvAnalogaP", label: "CAJAS TV ANTERIORES_P" },
-  { key: "dthP", label: "OTT_P" },
-  { key: "dttP", label: "EKT_P" },
-  { key: "modemP", label: "MODEM_P" },
-  { key: "ontP", label: "ONU_P" },
-  { key: "routerP", label: "ROUTER_P" },
-  { key: "otrosP", label: "OTROS_P" },
-  { key: "totalP", label: "TOTAL_P" },
-] as const;
-
-export type ClaveResumenPendiente = (typeof COLUMNAS_RESUMEN_PENDIENTE)[number]["key"];
-
-export type InformeResumenPendiente = Record<ClaveResumenPendiente, string>;
 
 export function parseNumeroPendiente(value: string | null | undefined): number | null {
   const raw = String(value ?? "").trim().replace(/,/g, "");
