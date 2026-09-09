@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { requirePanelAccess } from "@/lib/auth";
+import { badRequest } from "@/lib/errors";
 import { apiHandler, handleOptions, json, readJson } from "@/lib/http";
 import {
+  eliminarInformeRecepcion,
   guardarInformeRecepcion,
   obtenerInformeRecepcion,
 } from "@/lib/informes-recepcion";
@@ -36,4 +38,15 @@ export const POST = apiHandler(async (request: NextRequest) => {
     }),
     201,
   );
+});
+
+export const DELETE = apiHandler(async (request: NextRequest) => {
+  await requirePanelAccess(request);
+  const query = informeRecepcionListSchema.parse(
+    Object.fromEntries(request.nextUrl.searchParams.entries()),
+  );
+  if (!query.periodo) {
+    throw badRequest("periodo es obligatorio");
+  }
+  return json(await eliminarInformeRecepcion(query.periodo));
 });

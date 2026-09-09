@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { badRequest } from "@/lib/errors";
+import { badRequest, notFound } from "@/lib/errors";
 import { esPeriodoValido, periodoEnZona } from "@/lib/fecha";
 import {
   cargasVigentesPorPeriodo,
@@ -9,7 +9,6 @@ import {
   datosRecepcionDeFila,
   equipoPendienteDeFila,
   filaDesdeRelaciones,
-  resumenPendienteDeItems,
   sanitizarFilasInforme,
   tipoEquipoDeFila,
   type FilaInforme,
@@ -102,33 +101,13 @@ export async function obtenerInformeRecepcion(
     throw badRequest("periodo inválido");
   }
 
-  const todas = await prisma.informeRecepcionCarga.findMany();
+  const todas = await prisma.informeRecepcionCarga.findMany({
+    include: {
+      subidoPor: { select: { nombre: true } },
+    },
+  });
   const vigentes = cargasVigentesPorPeriodo(todas);
   const periodos = vigentes.map((carga) => carga.periodo);
-  const ids = vigentes.map((carga) => carga.id);
-  const pendientes = ids.length
-    ? await prisma.informeRecepcionEquipoPendiente.findMany({
-        where: { fila: { cargaId: { in: ids } } },
-        select: {
-          cajaTvAnalogaP: true,
-          dttP: true,
-          dthP: true,
-          modemP: true,
-          ontP: true,
-          routerP: true,
-          otrosP: true,
-          totalP: true,
-          fila: { select: { cargaId: true } },
-        },
-      })
-    : [];
-
-  const pendientePorCarga = new Map<string, typeof pendientes>();
-  for (const item of pendientes) {
-    const lista = pendientePorCarga.get(item.fila.cargaId) ?? [];
-    lista.push(item);
-    pendientePorCarga.set(item.fila.cargaId, lista);
-  }
 
   const cargas: InformeRecepcionCargaResumen[] = [...vigentes]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
@@ -137,7 +116,7 @@ export async function obtenerInformeRecepcion(
       archivo: carga.archivo,
       filas: carga.filas,
       createdAt: carga.createdAt.toISOString(),
-      pendiente: resumenPendienteDeItems(pendientePorCarga.get(carga.id) ?? []),
+      usuario: carga.subidoPor?.nombre ?? null,
     }));
 
   if (!periodo) {
@@ -270,4 +249,19 @@ export async function guardarInformeRecepcion(input: {
     periodoGuardado: periodo,
     filasDelPeriodo: filas.length,
   };
+}
+
+export async function eliminarInformeRecepcion(
+  periodo: string,
+): Promise<InformeRecepcionActual> {
+  if (!esPeriodoValido(periodo)) {
+    throw badRequest("periodo inválido");
+  }
+  const result = await prisma.informeRecepcionCarga.deleteMany({
+    where: { periodo },
+  });
+  if (result.count === 0) {
+    throw notFound("No hay informe para ese mes");
+  }
+  return obtenerInformeRecepcion();
 }

@@ -133,13 +133,19 @@ const endpoints = [
     method: "GET",
     path: "/api/v1/informes-recepcion",
     description:
-      "Control de recepción de equipos. Query opcional: periodo (YYYY-MM). Sin periodo devuelve el acumulado de todos los meses.",
+      "Lista informes de recepción. Query opcional: periodo (YYYY-MM). Sin periodo devuelve la lista de cargas (fecha, mes, usuario y archivo). Con periodo incluye las filas de ese mes.",
   },
   {
     method: "POST",
     path: "/api/v1/informes-recepcion",
     description:
       "Guarda o reemplaza un mes del informe. Body: archivo, filas (máx. 8000), periodo opcional (YYYY-MM). Cada grupo (tipo de equipo, cliente, equipo, recepción y pendiente) se guarda en su tabla.",
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/informes-recepcion",
+    description:
+      "Elimina el informe de un mes. Query obligatorio: periodo (YYYY-MM).",
   },
 ];
 

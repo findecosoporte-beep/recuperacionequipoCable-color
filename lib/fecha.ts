@@ -38,6 +38,11 @@ export function mesEnZona(date = new Date()): string {
   return periodoEnZona(date).slice(5, 7);
 }
 
+export function nombreMesDePeriodo(periodo: string): string {
+  const mes = periodo.slice(5, 7);
+  return MESES_DEL_ANIO.find((item) => item.value === mes)?.label ?? periodo;
+}
+
 export function armarPeriodo(anio: number, mes: string): string {
   return `${anio}-${mes}`;
 }

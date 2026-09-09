@@ -5,6 +5,7 @@ import {
   armarPeriodo,
   etiquetaPeriodo,
   esPeriodoValido,
+  nombreMesDePeriodo,
   opcionesAnioCarga,
   periodoEnZona,
 } from "./fecha";
@@ -107,6 +108,7 @@ describe("informes recepción", () => {
     assert.equal(MESES_DEL_ANIO.length, 12);
     assert.equal(MESES_DEL_ANIO[0]?.label, "Enero");
     assert.equal(MESES_DEL_ANIO[11]?.label, "Diciembre");
+    assert.equal(nombreMesDePeriodo("2026-09"), "Septiembre");
     assert.equal(armarPeriodo(2026, "09"), "2026-09");
     const anios = opcionesAnioCarga(["2024-01"]);
     assert.ok(anios.includes(2024));

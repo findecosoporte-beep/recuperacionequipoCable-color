@@ -3,31 +3,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "primereact/button";
+import { Column } from "primereact/column";
+import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
+import { DataTable } from "primereact/datatable";
 import { Message } from "primereact/message";
 import { InformeMesDialog } from "@/components/informe-mes-dialog";
-import { InformeResumenBar } from "@/components/informe-resumen-bar";
 import { InformeTablaDialog } from "@/components/informe-tabla-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
 import { apiRequest } from "@/lib/api-client";
 import { downloadPlantillaInformes, parseInformesExcel } from "@/lib/excel-informes";
-import { etiquetaPeriodo } from "@/lib/fecha";
+import { etiquetaPeriodo, formatFechaHora, nombreMesDePeriodo } from "@/lib/fecha";
+import { titleCase } from "@/lib/format-orden";
 import {
   type FilaInforme,
   type InformeRecepcionActual,
   type InformeRecepcionCargaResumen,
 } from "@/lib/informes-tabla";
 import { esRolPanel } from "@/lib/roles";
-
-function fechaCarga(iso: string | null): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleString("es-MX", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
 
 export function InformesDashboard() {
   const router = useRouter();
@@ -45,6 +38,7 @@ export function InformesDashboard() {
   const [tablaLoading, setTablaLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
@@ -108,6 +102,42 @@ export function InformesDashboard() {
     }
   }
 
+  async function eliminarInforme(carga: InformeRecepcionCargaResumen) {
+    setDeleting(carga.periodo);
+    setError(null);
+    setOk(null);
+    try {
+      const data = await apiRequest<InformeRecepcionActual>(
+        `/api/v1/informes-recepcion?periodo=${encodeURIComponent(carga.periodo)}`,
+        { method: "DELETE" },
+      );
+      aplicarLista(data);
+      if (tablaPeriodo === carga.periodo) {
+        setTablaOpen(false);
+        setTablaFilas([]);
+        setTablaPeriodo(null);
+      }
+      setOk(`Se eliminó el informe de ${etiquetaPeriodo(carga.periodo)}.`);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No se pudo eliminar el informe",
+      );
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  function confirmarEliminar(carga: InformeRecepcionCargaResumen) {
+    confirmDialog({
+      header: "Eliminar informe",
+      message: `¿Eliminar el informe de ${etiquetaPeriodo(carga.periodo)} (${carga.archivo})? Esta acción no se puede deshacer.`,
+      acceptLabel: "Eliminar",
+      rejectLabel: "Cancelar",
+      acceptClassName: "p-button-danger",
+      accept: () => void eliminarInforme(carga),
+    });
+  }
+
   async function agregarArchivo(file: File) {
     setImporting(true);
     setError(null);
@@ -150,6 +180,7 @@ export function InformesDashboard() {
 
   return (
     <AppShell title="Informes generales" subtitle="Recuperación">
+      <ConfirmDialog />
       <main className="mx-auto w-full flex-1 px-4 py-6 sm:px-6">
         <div className="rounded-md border border-[var(--surface-200)] bg-white px-4 py-8 sm:px-6">
           <header className="text-center">
@@ -193,8 +224,8 @@ export function InformesDashboard() {
           </div>
 
           <p className="mt-3 mb-0 text-sm text-[var(--text-color-secondary)]">
-            Cada informe subido muestra el resumen de equipo pendiente. Pulsa
-            Ver tabla para abrir el detalle.
+            Gestiona los informes por mes. En Acciones puedes ver la tabla o
+            eliminar un informe.
           </p>
 
           <InformeMesDialog
@@ -223,45 +254,80 @@ export function InformesDashboard() {
             </div>
           ) : null}
 
-          <div className="mt-6 grid gap-5">
-            {loading ? (
-              <p className="m-0 py-8 text-center text-[var(--text-color-secondary)]">
-                Cargando informes...
-              </p>
-            ) : cargas.length === 0 ? (
-              <p className="m-0 py-8 text-center text-[var(--text-color-secondary)]">
-                Aún no hay informes. Agrega un archivo para ver el resumen.
-              </p>
-            ) : (
-              cargas.map((carga) => (
-                <article
-                  key={carga.periodo}
-                  className="rounded-md border border-[var(--surface-200)] p-4"
-                >
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h2 className="m-0 text-base font-semibold uppercase">
-                        {etiquetaPeriodo(carga.periodo)}
-                      </h2>
-                      <p className="m-0 mt-1 text-sm text-[var(--text-color-secondary)]">
-                        {carga.archivo} · {carga.filas} filas
-                        {fechaCarga(carga.createdAt)
-                          ? ` · ${fechaCarga(carga.createdAt)}`
-                          : ""}
-                      </p>
+          <div className="mt-6 overflow-auto">
+            <DataTable
+              value={cargas}
+              dataKey="periodo"
+              loading={loading}
+              emptyMessage="Aún no hay informes. Agrega un archivo para empezar."
+              size="small"
+              stripedRows
+              tableStyle={{ minWidth: "52rem" }}
+            >
+              <Column
+                header="Fecha informe"
+                style={{ width: "20%" }}
+                body={(row: InformeRecepcionCargaResumen) =>
+                  formatFechaHora(row.createdAt)
+                }
+              />
+              <Column
+                header="Mes de"
+                style={{ width: "16%" }}
+                body={(row: InformeRecepcionCargaResumen) => (
+                  <span>
+                    {nombreMesDePeriodo(row.periodo)}{" "}
+                    {row.periodo.slice(0, 4)}
+                  </span>
+                )}
+              />
+              <Column
+                header="Usuario"
+                style={{ width: "18%" }}
+                body={(row: InformeRecepcionCargaResumen) =>
+                  titleCase(row.usuario ?? "")
+                }
+              />
+              <Column
+                header="Reporte"
+                style={{ width: "28%" }}
+                body={(row: InformeRecepcionCargaResumen) => (
+                  <div>
+                    <div className="font-medium">{row.archivo}</div>
+                    <div className="text-sm text-[var(--text-color-secondary)]">
+                      {row.filas} filas
                     </div>
+                  </div>
+                )}
+              />
+              <Column
+                header="Acciones"
+                style={{ width: "18%" }}
+                body={(row: InformeRecepcionCargaResumen) => (
+                  <div className="flex flex-wrap gap-1">
                     <Button
                       type="button"
-                      label="Ver tabla"
+                      label="Ver"
                       icon="pi pi-table"
-                      outlined
-                      onClick={() => void abrirTabla(carga)}
+                      size="small"
+                      text
+                      onClick={() => void abrirTabla(row)}
+                    />
+                    <Button
+                      type="button"
+                      label="Eliminar"
+                      icon="pi pi-trash"
+                      size="small"
+                      text
+                      severity="danger"
+                      loading={deleting === row.periodo}
+                      disabled={Boolean(deleting)}
+                      onClick={() => confirmarEliminar(row)}
                     />
                   </div>
-                  <InformeResumenBar pendiente={carga.pendiente} />
-                </article>
-              ))
-            )}
+                )}
+              />
+            </DataTable>
           </div>
         </div>
       </main>
