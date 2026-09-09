@@ -1,99 +1,31 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "primereact/button";
+import { Message } from "primereact/message";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
+import { downloadPlantillaInformes, parseInformesExcel } from "@/lib/excel-informes";
+import {
+  COLUMNAS,
+  FIJAS,
+  GRUPOS,
+  type FilaInforme,
+} from "@/lib/informes-tabla";
 import { esRolPanel } from "@/lib/roles";
 
-interface ColumnaInforme {
-  key: string;
-  label: string;
-  width: string;
-}
-
-interface GrupoInforme {
-  label: string;
-  cols: ColumnaInforme[];
-}
-
-const FIJAS: ColumnaInforme[] = [
-  { key: "n", label: "#", width: "2.5rem" },
-  { key: "fechaCliente", label: "FECHA QUE ENTREGO EL CLIENTE", width: "7.5rem" },
-];
-
-const GRUPOS: GrupoInforme[] = [
-  {
-    label: "TIPO DE EQUIPO",
-    cols: [
-      { key: "cajaTvAnaloga", label: "CAJA TV ANALOGA", width: "5.5rem" },
-      { key: "dtt", label: "DTT", width: "3.5rem" },
-      { key: "dth", label: "DTH", width: "3.5rem" },
-      { key: "modem", label: "MODEM", width: "4.5rem" },
-      { key: "ont", label: "ONT", width: "3.5rem" },
-      { key: "router", label: "ROUTER", width: "4.5rem" },
-      { key: "otros", label: "OTROS", width: "4rem" },
-      { key: "tipoEquipo", label: "TIPO DE EQUIPO", width: "7rem" },
-      { key: "identificador", label: "IDENTIFICADOR", width: "8rem" },
-    ],
-  },
-  {
-    label: "DATOS DEL CLIENTE",
-    cols: [
-      { key: "modelo", label: "MODELO", width: "6rem" },
-      { key: "codigoCliente", label: "Código de Cliente", width: "7rem" },
-      { key: "contratoAnulado", label: "Contrato Anulado", width: "7rem" },
-      { key: "numeroOrden", label: "Número Orden", width: "6.5rem" },
-    ],
-  },
-  {
-    label: "DATOS DEL EQUIPO",
-    cols: [
-      { key: "serie", label: "Serie", width: "7rem" },
-      { key: "codigoBarra", label: "Código Barra", width: "7rem" },
-      { key: "tarjeta", label: "Tarjeta", width: "6rem" },
-    ],
-  },
-  {
-    label: "DATOS DE RECEPCION DE EQUIPO",
-    cols: [
-      {
-        key: "tecnico",
-        label: "NOMBRE DE TÉCNICO DE RECUPERACIÓN DE EQUIPOS",
-        width: "11rem",
-      },
-      { key: "empresaEjecutora", label: "EMPRESA EJECUTORA", width: "8rem" },
-      { key: "procedencia", label: "PROCEDENCIA", width: "7rem" },
-      { key: "ciudad", label: "CIUDAD", width: "6rem" },
-      { key: "region", label: "REGIÓN", width: "6rem" },
-      { key: "empresa", label: "EMPRESA", width: "6rem" },
-      { key: "supervisor", label: "SUPERVISOR", width: "8rem" },
-    ],
-  },
-  {
-    label: "EQUIPO PENDIENTE",
-    cols: [
-      { key: "cajaTvAnalogaP", label: "CAJA TV ANALOGA_P", width: "6rem" },
-      { key: "dttP", label: "DTT_P", width: "4rem" },
-      { key: "dthP", label: "DTH_P", width: "4rem" },
-      { key: "modemP", label: "MODEM_P", width: "5rem" },
-      { key: "ontP", label: "ONT_P", width: "4rem" },
-      { key: "routerP", label: "ROUTER_P", width: "5rem" },
-      { key: "otrosP", label: "OTROS_P", width: "4.5rem" },
-      { key: "totalP", label: "TOTAL_P", width: "4.5rem" },
-    ],
-  },
-];
-
-const COLUMNAS: ColumnaInforme[] = [
-  ...FIJAS,
-  ...GRUPOS.flatMap((grupo) => grupo.cols),
-];
 const FILAS_VACIAS = 12;
 
 export function InformesDashboard() {
   const router = useRouter();
   const { user, ready } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [filas, setFilas] = useState<FilaInforme[]>([]);
+  const [archivo, setArchivo] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -106,6 +38,26 @@ export function InformesDashboard() {
     }
   }, [ready, user, router]);
 
+  async function agregarArchivo(file: File) {
+    setImporting(true);
+    setError(null);
+    setOk(null);
+    try {
+      if (file.size > 8 * 1024 * 1024) {
+        throw new Error("El Excel no puede superar 8 MB");
+      }
+      const parsed = await parseInformesExcel(await file.arrayBuffer());
+      setFilas(parsed.filas);
+      setArchivo(file.name);
+      setOk(`Se cargaron ${parsed.filas.length} filas desde ${file.name}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo leer el Excel");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   if (!ready || !user || !esRolPanel(user.rol)) {
     return (
       <div className="flex flex-1 items-center justify-center text-[var(--text-color-secondary)]">
@@ -113,6 +65,8 @@ export function InformesDashboard() {
       </div>
     );
   }
+
+  const filasTabla = filas.length > 0 ? filas : Array.from({ length: FILAS_VACIAS }, () => ({}));
 
   return (
     <AppShell title="Informes generales" subtitle="Recuperación">
@@ -129,6 +83,47 @@ export function InformesDashboard() {
               CONTROL DE RECEPCIÓN DE EQUIPOS
             </p>
           </header>
+
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              label={importing ? "Cargando archivo..." : "Agregar archivo"}
+              icon="pi pi-upload"
+              loading={importing}
+              onClick={() => fileInputRef.current?.click()}
+            />
+            <Button
+              type="button"
+              label="Descargar plantilla"
+              icon="pi pi-download"
+              outlined
+              onClick={() => void downloadPlantillaInformes()}
+            />
+            {archivo ? (
+              <span className="text-sm text-[var(--text-color-secondary)]">{archivo}</span>
+            ) : null}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void agregarArchivo(file);
+              }}
+            />
+          </div>
+
+          {error ? (
+            <div className="mt-4">
+              <Message severity="error" text={error} />
+            </div>
+          ) : null}
+          {ok ? (
+            <div className="mt-4">
+              <Message severity="success" text={ok} />
+            </div>
+          ) : null}
 
           <div className="informes-tabla-wrap">
             <table className="informes-tabla">
@@ -159,10 +154,10 @@ export function InformesDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {Array.from({ length: FILAS_VACIAS }, (_, index) => (
+                {filasTabla.map((fila, index) => (
                   <tr key={index}>
                     {COLUMNAS.map((col) => (
-                      <td key={col.key} />
+                      <td key={col.key}>{fila[col.key] ?? ""}</td>
                     ))}
                   </tr>
                 ))}
