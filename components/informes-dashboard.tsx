@@ -5,15 +5,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "primereact/button";
 import { Dropdown } from "primereact/dropdown";
 import { Message } from "primereact/message";
+import { InformeMesDialog } from "@/components/informe-mes-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
 import { apiRequest } from "@/lib/api-client";
 import { downloadPlantillaInformes, parseInformesExcel } from "@/lib/excel-informes";
-import {
-  etiquetaPeriodo,
-  opcionesPeriodoCarga,
-  periodoEnZona,
-} from "@/lib/fecha";
+import { etiquetaPeriodo } from "@/lib/fecha";
 import {
   COLUMNAS,
   FIJAS,
@@ -40,12 +37,14 @@ export function InformesDashboard() {
   const router = useRouter();
   const { user, ready } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const periodoCargaRef = useRef("");
   const [filas, setFilas] = useState<FilaInforme[]>([]);
   const [archivo, setArchivo] = useState<string | null>(null);
   const [guardadoEn, setGuardadoEn] = useState<string | null>(null);
   const [periodos, setPeriodos] = useState<string[]>([]);
   const [periodoVista, setPeriodoVista] = useState(TODOS);
-  const [periodoCarga, setPeriodoCarga] = useState(periodoEnZona);
+  const [periodoCarga, setPeriodoCarga] = useState("");
+  const [mesDialogOpen, setMesDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +91,13 @@ export function InformesDashboard() {
     void cargar(TODOS);
   }, [ready, user, router, cargar]);
 
+  function confirmarMes(periodo: string) {
+    periodoCargaRef.current = periodo;
+    setPeriodoCarga(periodo);
+    setMesDialogOpen(false);
+    window.setTimeout(() => fileInputRef.current?.click(), 0);
+  }
+
   async function agregarArchivo(file: File) {
     setImporting(true);
     setError(null);
@@ -107,13 +113,14 @@ export function InformesDashboard() {
           method: "POST",
           body: JSON.stringify({
             archivo: file.name,
-            periodo: periodoCarga,
+            periodo: periodoCargaRef.current || periodoCarga,
             filas: parsed.filas,
           }),
         },
       );
       aplicarCarga(saved);
       setPeriodoVista(TODOS);
+      setMesDialogOpen(false);
       const mes = etiquetaPeriodo(saved.periodoGuardado ?? periodoCarga);
       const deEsteMes = saved.filasDelPeriodo ?? parsed.filas.length;
       setOk(
@@ -147,11 +154,6 @@ export function InformesDashboard() {
       value: periodo,
     })),
   ];
-  const opcionesCarga = opcionesPeriodoCarga(periodos).map((periodo) => ({
-    label: etiquetaPeriodo(periodo),
-    value: periodo,
-  }));
-  const reemplazaMes = periodos.includes(periodoCarga);
 
   return (
     <AppShell title="Informes generales" subtitle="Recuperación">
@@ -183,24 +185,13 @@ export function InformesDashboard() {
                 className="w-full"
               />
             </label>
-            <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-sm sm:max-w-[16rem]">
-              <span className="text-[var(--text-color-secondary)]">
-                Mes de este archivo
-              </span>
-              <Dropdown
-                value={periodoCarga}
-                options={opcionesCarga}
-                onChange={(event) => setPeriodoCarga(event.value ?? periodoEnZona())}
-                className="w-full"
-              />
-            </label>
             <Button
               type="button"
               label={importing ? "Guardando archivo..." : "Agregar archivo"}
               icon="pi pi-upload"
               loading={importing}
               disabled={loading}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setMesDialogOpen(true)}
             />
             <Button
               type="button"
@@ -222,11 +213,16 @@ export function InformesDashboard() {
           </div>
 
           <p className="mt-3 mb-0 text-sm text-[var(--text-color-secondary)]">
-            {reemplazaMes
-              ? `Si subes de nuevo ${etiquetaPeriodo(periodoCarga)}, se reemplaza solo ese mes. Los demás se quedan.`
-              : "Cada mes se suma al acumulado. Elige el mes del Excel antes de subirlo."}
+            Al agregar un archivo se pide el mes. Cada mes se suma al acumulado.
             {archivo ? ` Último archivo: ${archivo}${fecha ? ` · ${fecha}` : ""}.` : ""}
           </p>
+
+          <InformeMesDialog
+            open={mesDialogOpen}
+            periodos={periodos}
+            onClose={() => setMesDialogOpen(false)}
+            onConfirm={confirmarMes}
+          />
 
           {error ? (
             <div className="mt-4">

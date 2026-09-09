@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  MESES_DEL_ANIO,
+  armarPeriodo,
   etiquetaPeriodo,
   esPeriodoValido,
-  opcionesPeriodoCarga,
+  opcionesAnioCarga,
   periodoEnZona,
 } from "./fecha";
 import {
@@ -86,8 +88,12 @@ describe("informes recepción", () => {
     assert.equal(esPeriodoValido("2026-09"), true);
     assert.equal(esPeriodoValido("2026-13"), false);
     assert.match(etiquetaPeriodo("2026-09"), /septiembre/i);
-    const opciones = opcionesPeriodoCarga(["2024-01"]);
-    assert.ok(opciones.includes("2024-01"));
-    assert.ok(opciones.includes(periodoEnZona()));
+    assert.equal(MESES_DEL_ANIO.length, 12);
+    assert.equal(MESES_DEL_ANIO[0]?.label, "Enero");
+    assert.equal(MESES_DEL_ANIO[11]?.label, "Diciembre");
+    assert.equal(armarPeriodo(2026, "09"), "2026-09");
+    const anios = opcionesAnioCarga(["2024-01"]);
+    assert.ok(anios.includes(2024));
+    assert.ok(anios.includes(Number(periodoEnZona().slice(0, 4))));
   });
 });

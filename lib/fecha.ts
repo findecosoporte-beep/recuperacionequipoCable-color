@@ -15,6 +15,42 @@ export function periodoEnZona(date = new Date()): string {
   return ymdEnZona(date).slice(0, 7);
 }
 
+export const MESES_DEL_ANIO = [
+  { value: "01", label: "Enero" },
+  { value: "02", label: "Febrero" },
+  { value: "03", label: "Marzo" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Mayo" },
+  { value: "06", label: "Junio" },
+  { value: "07", label: "Julio" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Septiembre" },
+  { value: "10", label: "Octubre" },
+  { value: "11", label: "Noviembre" },
+  { value: "12", label: "Diciembre" },
+] as const;
+
+export function anioEnZona(date = new Date()): number {
+  return Number(periodoEnZona(date).slice(0, 4));
+}
+
+export function mesEnZona(date = new Date()): string {
+  return periodoEnZona(date).slice(5, 7);
+}
+
+export function armarPeriodo(anio: number, mes: string): string {
+  return `${anio}-${mes}`;
+}
+
+export function opcionesAnioCarga(existentes: string[] = []): number[] {
+  const actual = anioEnZona();
+  const set = new Set([actual - 1, actual, actual + 1]);
+  for (const periodo of existentes) {
+    if (esPeriodoValido(periodo)) set.add(Number(periodo.slice(0, 4)));
+  }
+  return [...set].sort((a, b) => b - a);
+}
+
 export function esPeriodoValido(value: string): boolean {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
 }
