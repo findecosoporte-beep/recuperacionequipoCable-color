@@ -55,18 +55,6 @@ const GRUPOS: GrupoInforme[] = [
     ],
   },
   {
-    label: "ACCESORIOS",
-    cols: [
-      { key: "fuentePoder", label: "FUENTE PODER", width: "5.5rem" },
-      { key: "cableHdmi", label: "CABLE HDMI", width: "5.5rem" },
-      { key: "cableRca", label: "C- RCA", width: "4rem" },
-      { key: "fix", label: "FIX", width: "3.5rem" },
-      { key: "control", label: "CONTROL", width: "5rem" },
-      { key: "patchCord", label: "PATCH CORD", width: "5.5rem" },
-      { key: "cajaModem", label: "CAJA MODEM", width: "5.5rem" },
-    ],
-  },
-  {
     label: "DATOS DE RECEPCION DE EQUIPO",
     cols: [
       {
