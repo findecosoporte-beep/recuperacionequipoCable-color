@@ -90,6 +90,7 @@ export interface InformeRecepcionCargaResumen {
   filas: number;
   createdAt: string;
   usuario: string | null;
+  pendiente: InformeResumenPendiente;
 }
 
 export interface InformeRecepcionActual {

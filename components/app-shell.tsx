@@ -77,6 +77,15 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
           router.push("/informes");
         },
       },
+      {
+        label: "Resumen general",
+        icon: "pi pi-th-large",
+        className:
+          pathname === "/resumen-general" ? "ordenes-menu-active" : undefined,
+        command: () => {
+          router.push("/resumen-general");
+        },
+      },
     ],
     [pathname, router],
   );
