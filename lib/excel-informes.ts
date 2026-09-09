@@ -73,13 +73,40 @@ const ALIAS: Record<string, string> = {
 };
 
 for (const col of COLUMNAS) {
-  ALIAS[normalizeHeader(col.label)] = col.key;
+  const normalized = normalizeHeader(col.label);
+  if (normalized) ALIAS[normalized] = col.key;
+}
+
+function excelSerialAFecha(serial: number): string {
+  const utc = Date.UTC(1899, 11, 30) + Math.round(serial) * 86_400_000;
+  const date = new Date(utc);
+  const dia = String(date.getUTCDate()).padStart(2, "0");
+  const mes = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${dia}/${mes}/${date.getUTCFullYear()}`;
+}
+
+function fechaComoEnExcel(value: unknown): string {
+  if (value == null || value === "") return "";
+  if (value instanceof Date && Number.isFinite(value.getTime())) {
+    const dia = String(value.getUTCDate()).padStart(2, "0");
+    const mes = String(value.getUTCMonth() + 1).padStart(2, "0");
+    return `${dia}/${mes}/${value.getUTCFullYear()}`;
+  }
+  if (typeof value === "number" && value >= 20_000 && value <= 80_000) {
+    return excelSerialAFecha(value);
+  }
+  const texto = String(value).trim();
+  if (/^\d+(\.\d+)?$/.test(texto)) {
+    const serial = Number(texto);
+    if (serial >= 20_000 && serial <= 80_000) return excelSerialAFecha(serial);
+  }
+  return texto;
 }
 
 function cellToString(value: unknown): string {
   if (value == null || value === "") return "";
   if (value instanceof Date && Number.isFinite(value.getTime())) {
-    return value.toLocaleDateString("es-HN");
+    return fechaComoEnExcel(value);
   }
   if (typeof value === "number") {
     if (Number.isFinite(value) && Math.abs(value) < 1e15) {
@@ -91,14 +118,41 @@ function cellToString(value: unknown): string {
   return String(value).trim();
 }
 
+function valorCelda(value: unknown, key: string): string {
+  if (key === "fechaCliente") return fechaComoEnExcel(value);
+  return cellToString(value);
+}
+
 function mapHeader(header: string): string | null {
-  return ALIAS[normalizeHeader(header)] ?? null;
+  const trimmed = header.trim();
+  if (!trimmed) return null;
+  if (trimmed === "#") return "n";
+  return ALIAS[normalizeHeader(trimmed)] ?? null;
 }
 
 function contarEncabezados(row: unknown[]): number {
   return row.reduce<number>((total, cell) => {
     return mapHeader(cellToString(cell)) ? total + 1 : total;
   }, 0);
+}
+
+function mappearColumnas(
+  headerRow: unknown[],
+  filaAnterior?: unknown[],
+): Map<string, number> {
+  const columns = new Map<string, number>();
+  const width = Math.max(headerRow.length, filaAnterior?.length ?? 0);
+  for (let index = 0; index < width; index += 1) {
+    const fromHeader = mapHeader(cellToString(headerRow[index]));
+    const fromPrev = filaAnterior
+      ? mapHeader(cellToString(filaAnterior[index]))
+      : null;
+    const mapped = fromHeader ?? fromPrev;
+    if (mapped && !columns.has(mapped)) {
+      columns.set(mapped, index);
+    }
+  }
+  return columns;
 }
 
 export async function parseInformesExcel(buffer: ArrayBuffer): Promise<InformeExcelResult> {
@@ -140,23 +194,22 @@ export async function parseInformesExcel(buffer: ArrayBuffer): Promise<InformeEx
     );
   }
 
-  const columns = new Map<string, number>();
-  rows[headerIndex].forEach((cell, index) => {
-    const mapped = mapHeader(cellToString(cell));
-    if (mapped && !columns.has(mapped)) {
-      columns.set(mapped, index);
-    }
-  });
+  const columns = mappearColumnas(
+    rows[headerIndex],
+    headerIndex > 0 ? rows[headerIndex - 1] : undefined,
+  );
 
   const filas: FilaInforme[] = [];
   for (let i = headerIndex + 1; i < rows.length; i += 1) {
     const row = rows[i];
+    if (contarEncabezados(row) >= 3) continue;
     const valores: FilaInforme = {};
     let tieneDato = false;
     for (const col of COLUMNAS) {
       if (col.key === "n") continue;
       const idx = columns.get(col.key);
-      const value = idx == null || idx >= row.length ? "" : cellToString(row[idx]);
+      const value =
+        idx == null || idx >= row.length ? "" : valorCelda(row[idx], col.key);
       valores[col.key] = value;
       if (value) tieneDato = true;
     }
