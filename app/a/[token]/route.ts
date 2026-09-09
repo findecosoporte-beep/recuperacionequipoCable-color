@@ -23,7 +23,9 @@ export async function GET(
       return new NextResponse("Acuse no encontrado", { status: 404 });
     }
 
-    return new NextResponse(htmlAcuse(acuse, { compartir: true }), {
+    return new NextResponse(
+      htmlAcuse(acuse, { compartir: true, empresa: orden.tecnico?.empresa }),
+      {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "private, no-store",

@@ -48,6 +48,7 @@ model Usuario {
   activo         Boolean  @default(true)
   telefono       String?
   zona           String?
+  empresa        String   @default("isg")
   ordenes        Orden[]  @relation("OrdenesAsignadas")
   recuperaciones Orden[]  @relation("OrdenesRecuperadas")
   avisosWhatsapp AvisoWhatsApp[]

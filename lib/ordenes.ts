@@ -16,6 +16,7 @@ const tecnicoSelect = {
   nombre: true,
   email: true,
   activo: true,
+  empresa: true,
 } as const;
 
 const ordenInclude = {

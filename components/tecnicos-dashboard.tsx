@@ -120,6 +120,7 @@ export function TecnicosDashboard() {
         email: payload.email,
         telefono: payload.telefono.trim() ? payload.telefono.trim() : null,
         zona: payload.zona.trim() ? payload.zona.trim() : null,
+        empresa: payload.empresa,
         activo: payload.activo,
         ...(payload.password ? { password: payload.password } : {}),
       };
@@ -251,12 +252,19 @@ export function TecnicosDashboard() {
             />
             <Column
               header="Zona"
-              style={{ width: "16%" }}
+              style={{ width: "14%" }}
               body={(row: Tecnico) => (row.zona ? titleCase(row.zona) : "—")}
             />
             <Column
+              header="Empresa"
+              style={{ width: "12%" }}
+              body={(row: Tecnico) => (
+                <Tag value={row.empresa === "cable_color" ? "Cable Color" : "ISG"} />
+              )}
+            />
+            <Column
               header="Rol"
-              style={{ width: "14%" }}
+              style={{ width: "12%" }}
               body={(row: Tecnico) => <Tag value={etiquetaRol(row.rol)} />}
             />
             <Column

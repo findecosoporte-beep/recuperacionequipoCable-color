@@ -3,18 +3,21 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
+import { Dropdown } from "primereact/dropdown";
 import { FloatLabel } from "primereact/floatlabel";
 import { InputSwitch } from "primereact/inputswitch";
 import { InputText } from "primereact/inputtext";
 import { Message } from "primereact/message";
 import { Password } from "primereact/password";
 import type { Tecnico, TecnicoPayload } from "@/lib/types";
+import { EMPRESAS_WHATSAPP } from "@/lib/whatsapp";
 
 interface FormState {
   nombre: string;
   email: string;
   telefono: string;
   zona: string;
+  empresa: "isg" | "cable_color";
   password: string;
   activo: boolean;
 }
@@ -24,6 +27,7 @@ const emptyForm: FormState = {
   email: "",
   telefono: "",
   zona: "",
+  empresa: "isg",
   password: "",
   activo: true,
 };
@@ -55,6 +59,7 @@ export function TecnicoFormModal({
         email: tecnico.email,
         telefono: tecnico.telefono ?? "",
         zona: tecnico.zona ?? "",
+        empresa: tecnico.empresa === "cable_color" ? "cable_color" : "isg",
         password: "",
         activo: tecnico.activo,
       });
@@ -74,6 +79,7 @@ export function TecnicoFormModal({
       email: form.email,
       telefono: form.telefono,
       zona: form.zona,
+      empresa: form.empresa,
       activo: form.activo,
       ...(form.password.trim() ? { password: form.password } : {}),
     });
@@ -136,6 +142,25 @@ export function TecnicoFormModal({
           />
           <label htmlFor="tecnico-zona">Zona</label>
         </FloatLabel>
+        <div className="sm:col-span-2">
+          <label className="mb-2 block text-sm font-medium" htmlFor="tecnico-empresa">
+            Empresa del acuse
+          </label>
+          <Dropdown
+            inputId="tecnico-empresa"
+            className="w-full"
+            value={form.empresa}
+            options={EMPRESAS_WHATSAPP}
+            optionLabel="label"
+            optionValue="id"
+            onChange={(event) =>
+              update("empresa", event.value === "cable_color" ? "cable_color" : "isg")
+            }
+          />
+          <p className="mt-2 mb-0 text-sm text-[var(--text-color-secondary)]">
+            El acuse que imprime en la app sale con el logo de esta empresa.
+          </p>
+        </div>
         <div className="sm:col-span-2">
           <FloatLabel>
             <Password

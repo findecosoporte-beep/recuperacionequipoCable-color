@@ -5,6 +5,7 @@ export interface Usuario {
   rol: string;
   telefono?: string | null;
   zona?: string | null;
+  empresa?: "isg" | "cable_color";
   activo?: boolean;
 }
 
@@ -15,6 +16,7 @@ export interface Tecnico {
   rol: string;
   telefono: string | null;
   zona: string | null;
+  empresa: "isg" | "cable_color";
   activo: boolean;
   createdAt: string;
   updatedAt: string;
@@ -26,6 +28,7 @@ export interface TecnicoPayload {
   password?: string;
   telefono: string;
   zona: string;
+  empresa: "isg" | "cable_color";
   activo: boolean;
 }
 
@@ -34,6 +37,7 @@ export interface OrdenTecnico {
   nombre: string;
   email: string;
   activo: boolean;
+  empresa?: "isg" | "cable_color";
 }
 
 export interface AcuseRecibido {

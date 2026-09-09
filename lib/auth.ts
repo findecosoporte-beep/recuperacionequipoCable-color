@@ -34,6 +34,7 @@ export function publicUser(user: {
   rol: string;
   telefono?: string | null;
   zona?: string | null;
+  empresa?: string | null;
   activo?: boolean;
 }) {
   return {
@@ -43,6 +44,7 @@ export function publicUser(user: {
     rol: user.rol,
     telefono: user.telefono ?? null,
     zona: user.zona ?? null,
+    empresa: user.empresa === "cable_color" ? "cable_color" : "isg",
     activo: user.activo ?? true,
   };
 }
@@ -141,6 +143,7 @@ export async function requireSessionUser(request: NextRequest) {
       activo: true,
       telefono: true,
       zona: true,
+      empresa: true,
     },
   });
 

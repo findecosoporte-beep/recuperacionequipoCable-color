@@ -9,6 +9,7 @@ import {
   ACCESORIOS,
   acuseDeOrden,
   acuseInicialDeOrden,
+  empresaDeAcuse,
   htmlAcuse,
   validarAcuse,
   type AcuseRecibido,
@@ -38,6 +39,7 @@ interface Props {
 export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Props) {
   const existente = orden ? acuseDeOrden(orden) : null;
   const { empresa } = useEmpresaWhatsApp();
+  const empresaAcuse = empresaDeAcuse(orden?.tecnico?.empresa ?? empresa);
   const [form, setForm] = useState<AcuseRecibido | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compartiendo, setCompartiendo] = useState(false);
@@ -56,7 +58,10 @@ export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Pro
     setError(null);
   }, [orden, firma]);
 
-  const preview = useMemo(() => (form ? htmlAcuse(form) : ""), [form]);
+  const preview = useMemo(
+    () => (form ? htmlAcuse(form, { empresa: empresaAcuse }) : ""),
+    [form, empresaAcuse],
+  );
 
   function setField<K extends keyof AcuseRecibido>(key: K, value: AcuseRecibido[K]) {
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
@@ -201,7 +206,7 @@ export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Pro
           ) : (
             <form onSubmit={submit} className="grid gap-3">
               <p className="m-0 text-sm text-[var(--text-color-secondary)]">
-                Mismo formato que la app del técnico (ISG Communications).
+                Mismo formato que la app del técnico (ISG o Cable Color).
               </p>
               {(
                 [

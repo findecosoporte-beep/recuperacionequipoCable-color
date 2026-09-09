@@ -21,6 +21,7 @@ function toTecnico(user: {
   rol: string;
   telefono: string | null;
   zona: string | null;
+  empresa?: string | null;
   activo: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -103,6 +104,7 @@ export async function createTecnico(input: TecnicoCreateInput) {
       rol: ROL_TECNICO,
       telefono: input.telefono,
       zona: input.zona,
+      empresa: input.empresa ?? "isg",
       activo: input.activo,
     },
   });
@@ -118,6 +120,7 @@ export async function updateTecnico(id: string, input: TecnicoUpdateInput) {
       ...(input.email !== undefined ? { email: input.email } : {}),
       ...(input.telefono !== undefined ? { telefono: input.telefono } : {}),
       ...(input.zona !== undefined ? { zona: input.zona } : {}),
+      ...(input.empresa !== undefined ? { empresa: input.empresa } : {}),
       ...(input.activo !== undefined ? { activo: input.activo } : {}),
       ...(input.password
         ? { passwordHash: await hashPassword(input.password) }

@@ -37,6 +37,7 @@ export const tecnicoCreateSchema = z.object({
     .nullable()
     .transform((value) => (value ? value : null)),
   zona: optionalText(100),
+  empresa: z.enum(["isg", "cable_color"]).optional().default("isg"),
   activo: z.boolean().optional().default(true),
 });
 
@@ -64,6 +65,7 @@ export const tecnicoUpdateSchema = z
       .nullable()
       .transform((value) => (value ? value : null)),
     zona: optionalText(100),
+    empresa: z.enum(["isg", "cable_color"]).optional(),
     activo: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {

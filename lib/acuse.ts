@@ -1,5 +1,7 @@
+import { LOGO_CABLE_COLOR_SRC } from "@/lib/logo-cable-color";
 import { LOGO_ISG_SRC } from "@/lib/logo-isg";
 import { parseNombreCliente } from "@/lib/nombre-cliente";
+import { esEmpresaWhatsApp, type EmpresaWhatsApp } from "@/lib/whatsapp";
 
 export const MARCA_ACUSE_INI = "---ACUSE---";
 export const MARCA_ACUSE_FIN = "---FIN-ACUSE---";
@@ -249,10 +251,34 @@ function lineaHtml(value: string): string {
 }
 
 const LOGO_ISG_HTML = `<img class="logo-isg" src="${LOGO_ISG_SRC}" alt="ISG Communications" />`;
+const LOGO_CABLE_HTML = `<img class="logo-cable" src="${LOGO_CABLE_COLOR_SRC}" alt="Cable Color" />`;
+
+export function empresaDeAcuse(value?: string | null): EmpresaWhatsApp {
+  return esEmpresaWhatsApp(value) ? value : "isg";
+}
+
+function marcaAcuse(empresa?: string | null): {
+  logoHtml: string;
+  letterheadClass: string;
+  propiedad: string;
+} {
+  if (empresaDeAcuse(empresa) === "cable_color") {
+    return {
+      logoHtml: LOGO_CABLE_HTML,
+      letterheadClass: "letterhead letterhead-cable",
+      propiedad: "El siguiente Equipo(os) Propiedad de Cable Color:",
+    };
+  }
+  return {
+    logoHtml: LOGO_ISG_HTML,
+    letterheadClass: "letterhead",
+    propiedad: "El siguiente Equipo(os) Propiedad de ISG Communications:",
+  };
+}
 
 export function htmlAcuse(
   acuse: AcuseRecibido,
-  opciones?: { compartir?: boolean },
+  opciones?: { compartir?: boolean; empresa?: string | null },
 ): string {
   const accesorios = ACCESORIOS.map((nombre) => {
     const qty = acuse.accesorios[nombre] > 0 ? String(acuse.accesorios[nombre]) : "&nbsp;";
@@ -261,6 +287,7 @@ export function htmlAcuse(
   const barra = opciones?.compartir
     ? `<div class="share-bar"><button type="button" onclick="window.print()">Guardar PDF</button></div>`
     : "";
+  const marca = marcaAcuse(opciones?.empresa);
 
   return `<!DOCTYPE html>
 <html>
@@ -286,6 +313,12 @@ export function htmlAcuse(
       padding: 0;
     }
     .logo-isg { height: 72px; width: auto; max-width: 100%; display: block; }
+    .letterhead-cable {
+      background: #5c2d91;
+      padding: 10px 14px;
+      margin: 0 0 16px;
+    }
+    .logo-cable { height: 56px; width: auto; max-width: 100%; display: block; }
     h1 { text-align: center; font-size: 22px; margin: 8px 0 28px; color: #111111; }
     .label { font-size: 11px; color: #444444; margin-bottom: 4px; }
     .field { border-bottom: 1px solid #333333; padding-bottom: 4px; margin-bottom: 16px; font-size: 14px; }
@@ -311,8 +344,8 @@ export function htmlAcuse(
 <body>
   <div class="page">
     ${barra}
-    <div class="letterhead">
-      ${LOGO_ISG_HTML}
+    <div class="${marca.letterheadClass}">
+      ${marca.logoHtml}
     </div>
     <h1>Acuse de Recibo</h1>
     <div class="label">Recibimos del cliente:</div>
@@ -327,7 +360,7 @@ export function htmlAcuse(
         <div class="field">${lineaHtml(acuse.fecha)}</div>
       </div>
     </div>
-    <div class="equipos">El siguiente Equipo(os) Propiedad de ISG Communications:</div>
+    <div class="equipos">${marca.propiedad}</div>
     <div class="label">Modem/ONU:</div>
     <div class="field">${lineaHtml(acuse.modemOnu)}</div>
     <div class="label">Router:</div>

@@ -52,5 +52,8 @@ describe("acuse", () => {
     assert.match(htmlAcuse(acuse!), /data:image\/png/);
     assert.match(htmlAcuse(acuse!), /ISG Communications/);
     assert.match(htmlAcuse(acuse!), /Maria Estela/);
+    assert.match(htmlAcuse(acuse!, { empresa: "cable_color" }), /logo-cable/);
+    assert.match(htmlAcuse(acuse!, { empresa: "cable_color" }), /Cable Color/);
+    assert.doesNotMatch(htmlAcuse(acuse!, { empresa: "cable_color" }), /ISG Communications/);
   });
 });
