@@ -6,12 +6,23 @@ import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
 import { esRolPanel } from "@/lib/roles";
 
-const FIJAS = [
+interface ColumnaInforme {
+  key: string;
+  label: string;
+  width: string;
+}
+
+interface GrupoInforme {
+  label: string;
+  cols: ColumnaInforme[];
+}
+
+const FIJAS: ColumnaInforme[] = [
   { key: "n", label: "#", width: "2.5rem" },
   { key: "fechaCliente", label: "FECHA QUE ENTREGO EL CLIENTE", width: "7.5rem" },
-] as const;
+];
 
-const GRUPOS = [
+const GRUPOS: GrupoInforme[] = [
   {
     label: "TIPO DE EQUIPO",
     cols: [
@@ -84,9 +95,12 @@ const GRUPOS = [
       { key: "totalP", label: "TOTAL_P", width: "4.5rem" },
     ],
   },
-] as const;
+];
 
-const COLUMNAS = [...FIJAS, ...GRUPOS.flatMap((grupo) => grupo.cols)];
+const COLUMNAS: ColumnaInforme[] = [
+  ...FIJAS,
+  ...GRUPOS.flatMap((grupo) => grupo.cols),
+];
 const FILAS_VACIAS = 12;
 
 export function InformesDashboard() {
