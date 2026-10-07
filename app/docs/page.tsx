@@ -125,6 +125,12 @@ const endpoints = [
   },
   {
     method: "GET",
+    path: "/api/v1/dashboard",
+    description:
+      "Totales de equipos recuperados, mandados a anular y anulados, con corte por ciudad, tipo de equipo y motivo.",
+  },
+  {
+    method: "GET",
     path: "/api/v1/reportes",
     description:
       "Reporte de recuperadas o por anular. Query: tipo (recuperadas | por_anular), desde, hasta, ciudad, q.",

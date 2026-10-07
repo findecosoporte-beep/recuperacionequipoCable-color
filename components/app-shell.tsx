@@ -30,6 +30,14 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
         },
       },
       {
+        label: "Dashboard",
+        icon: "pi pi-chart-pie",
+        className: pathname === "/dashboard" ? "ordenes-menu-active" : undefined,
+        command: () => {
+          router.push("/dashboard");
+        },
+      },
+      {
         label: "Estado",
         icon: "pi pi-check-square",
         className: pathname === "/estado" ? "ordenes-menu-active" : undefined,
