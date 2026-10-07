@@ -106,7 +106,7 @@ export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Pro
       const destinos = data.destinos.length > 0 ? data.destinos : destinosWhatsApp([orden]);
       for (const destino of destinos) {
         window.open(urlWhatsApp(destino.wa, mensajeAcuseWhatsApp(destino, url)), "_blank", "noopener,noreferrer");
-        void registrarEnvioWhatsApp(orden.id, empresa, destino.wa);
+        void registrarEnvioWhatsApp(orden.id, empresaAcuse, destino.wa);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo compartir el acuse");
