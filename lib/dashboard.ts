@@ -16,6 +16,7 @@ export interface FilaDashboard {
 
 export interface ConteoCiudad {
   ciudad: string;
+  porRecuperar: number;
   recuperados: number;
   porAnular: number;
   anulados: number;
@@ -27,6 +28,7 @@ export interface ConteoNombre {
 }
 
 export interface ResumenDashboard {
+  porRecuperar: number;
   recuperados: number;
   porAnular: number;
   anulados: number;
@@ -99,6 +101,7 @@ function topConResto(
 }
 
 export function armarDashboard(filas: FilaDashboard[]): ResumenDashboard {
+  let porRecuperar = 0;
   let recuperados = 0;
   let porAnular = 0;
   let anulados = 0;
@@ -110,6 +113,7 @@ export function armarDashboard(filas: FilaDashboard[]): ResumenDashboard {
     const ciudadNombre = fila.ciudad.trim() ? titleCase(fila.ciudad) : "Sin ciudad";
     const ciudad = ciudades.get(ciudadClave) ?? {
       ciudad: ciudadNombre,
+      porRecuperar: 0,
       recuperados: 0,
       porAnular: 0,
       anulados: 0,
@@ -128,7 +132,8 @@ export function armarDashboard(filas: FilaDashboard[]): ResumenDashboard {
         equipos.set(tipo, (equipos.get(tipo) ?? 0) + 1);
       }
     } else {
-      continue;
+      porRecuperar += 1;
+      ciudad.porRecuperar += 1;
     }
 
     ciudades.set(ciudadClave, ciudad);
@@ -151,7 +156,7 @@ export function armarDashboard(filas: FilaDashboard[]): ResumenDashboard {
   const porCiudad = [...ciudades.values()]
     .map((item) => ({
       ...item,
-      total: item.recuperados + item.porAnular + item.anulados,
+      total: item.porRecuperar + item.recuperados + item.porAnular + item.anulados,
     }))
     .sort((a, b) => b.total - a.total || a.ciudad.localeCompare(b.ciudad, "es"));
 
@@ -162,27 +167,39 @@ export function armarDashboard(filas: FilaDashboard[]): ResumenDashboard {
       resto.reduce(
         (acc, item) => ({
           ciudad: "Otras",
+          porRecuperar: acc.porRecuperar + item.porRecuperar,
           recuperados: acc.recuperados + item.recuperados,
           porAnular: acc.porAnular + item.porAnular,
           anulados: acc.anulados + item.anulados,
           total: acc.total + item.total,
         }),
-        { ciudad: "Otras", recuperados: 0, porAnular: 0, anulados: 0, total: 0 },
+        {
+          ciudad: "Otras",
+          porRecuperar: 0,
+          recuperados: 0,
+          porAnular: 0,
+          anulados: 0,
+          total: 0,
+        },
       ),
     );
   }
 
   return {
+    porRecuperar,
     recuperados,
     porAnular,
     anulados,
-    total: recuperados + porAnular + anulados,
-    porCiudad: principales.map(({ ciudad, recuperados: rec, porAnular: anular, anulados: anu }) => ({
-      ciudad,
-      recuperados: rec,
-      porAnular: anular,
-      anulados: anu,
-    })),
+    total: porRecuperar + recuperados + porAnular + anulados,
+    porCiudad: principales.map(
+      ({ ciudad, porRecuperar: pendiente, recuperados: rec, porAnular: anular, anulados: anu }) => ({
+        ciudad,
+        porRecuperar: pendiente,
+        recuperados: rec,
+        porAnular: anular,
+        anulados: anu,
+      }),
+    ),
     porMotivo: topConResto(
       [...motivosConNombre.values()].map((item) => [item.nombre, item.total]),
       TOP_MOTIVOS,

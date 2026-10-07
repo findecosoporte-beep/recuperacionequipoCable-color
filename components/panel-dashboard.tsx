@@ -10,9 +10,10 @@ import type { ConteoCiudad, ConteoNombre, ResumenDashboard } from "@/lib/dashboa
 import { esRolPanel } from "@/lib/roles";
 
 const SERIES = [
-  { key: "recuperados", label: "Equipos recuperados", color: "#059669" },
-  { key: "porAnular", label: "Mandados a anular", color: "#d97706" },
-  { key: "anulados", label: "Anulados", color: "#5c2d91" },
+  { key: "porRecuperar", label: "Equipos por recuperar", detalle: "por órdenes", color: "#0369a1" },
+  { key: "recuperados", label: "Equipos recuperados", detalle: "por órdenes", color: "#059669" },
+  { key: "porAnular", label: "Mandados a anular", detalle: "por órdenes", color: "#d97706" },
+  { key: "anulados", label: "Anulados", detalle: "por órdenes", color: "#5c2d91" },
 ] as const;
 
 export function PanelDashboard() {
@@ -63,6 +64,7 @@ export function PanelDashboard() {
   }
 
   const valores = {
+    porRecuperar: datos?.porRecuperar ?? 0,
     recuperados: datos?.recuperados ?? 0,
     porAnular: datos?.porAnular ?? 0,
     anulados: datos?.anulados ?? 0,
@@ -73,7 +75,12 @@ export function PanelDashboard() {
       <main className="grid w-full min-w-0 gap-4 px-3 py-4 sm:px-5 sm:py-5">
         {error ? <Message severity="error" text={error} /> : null}
 
-        <section className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-3">
+        <p className="m-0 text-sm text-[var(--text-color-secondary)]">
+          Cada número es una orden. Entra lo que registra el técnico en la app y lo que marca el
+          administrador en el panel.
+        </p>
+
+        <section className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-4">
           {SERIES.map((serie) => (
             <article
               key={serie.key}
@@ -84,6 +91,9 @@ export function PanelDashboard() {
               </p>
               <p className="m-0 mt-2 text-4xl font-bold text-black">
                 {loading ? "…" : valores[serie.key]}
+              </p>
+              <p className="m-0 mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-color-secondary)]">
+                {serie.detalle}
               </p>
             </article>
           ))}
@@ -233,20 +243,22 @@ function BarrasCiudad({ filas }: { filas: ConteoCiudad[] }) {
   if (filas.length === 0) {
     return (
       <p className="py-10 text-center text-[var(--text-color-secondary)]">
-        Aún no hay órdenes recuperadas, mandadas a anular o anuladas.
+        Aún no hay órdenes por recuperar, recuperadas, mandadas a anular o anuladas.
       </p>
     );
   }
 
   const maximo = Math.max(
-    ...filas.map((fila) => fila.recuperados + fila.porAnular + fila.anulados),
+    ...filas.map(
+      (fila) => fila.porRecuperar + fila.recuperados + fila.porAnular + fila.anulados,
+    ),
     1,
   );
 
   return (
     <div className="mt-4 grid gap-3">
       {filas.map((fila) => {
-        const total = fila.recuperados + fila.porAnular + fila.anulados;
+        const total = fila.porRecuperar + fila.recuperados + fila.porAnular + fila.anulados;
         return (
           <div key={fila.ciudad}>
             <div className="mb-1 flex min-w-0 items-baseline justify-between gap-3 text-sm">
@@ -254,6 +266,7 @@ function BarrasCiudad({ filas }: { filas: ConteoCiudad[] }) {
               <span className="shrink-0">{total}</span>
             </div>
             <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
+              <span style={{ width: `${(fila.porRecuperar / maximo) * 100}%`, background: "#0369a1" }} />
               <span style={{ width: `${(fila.recuperados / maximo) * 100}%`, background: "#059669" }} />
               <span style={{ width: `${(fila.porAnular / maximo) * 100}%`, background: "#d97706" }} />
               <span style={{ width: `${(fila.anulados / maximo) * 100}%`, background: "#5c2d91" }} />

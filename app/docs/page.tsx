@@ -127,7 +127,7 @@ const endpoints = [
     method: "GET",
     path: "/api/v1/dashboard",
     description:
-      "Totales de equipos recuperados, mandados a anular y anulados, con corte por ciudad, tipo de equipo y motivo.",
+      "Totales por orden de equipos por recuperar, recuperados, mandados a anular y anulados. Incluye lo registrado por técnicos y por el administrador.",
   },
   {
     method: "GET",
