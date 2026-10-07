@@ -127,7 +127,7 @@ const endpoints = [
     method: "GET",
     path: "/api/v1/dashboard",
     description:
-      "Totales por orden de equipos por recuperar, recuperados, mandados a anular y anulados. Incluye lo registrado por técnicos y por el administrador.",
+      "Totales por orden de equipos por recuperar, recuperados, mandados a anular y anulados, más el control de WhatsApp por día, semana y técnico.",
   },
   {
     method: "GET",

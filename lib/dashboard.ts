@@ -1,4 +1,11 @@
 import { equiposRecuperadosDe, esOrdenRecuperada } from "@/lib/estado-orden";
+import {
+  fechaCorta,
+  inicioSemanaYmd,
+  nombreDia,
+  sumarDiasYmd,
+  ymdDeIso,
+} from "@/lib/fecha";
 import { titleCase } from "@/lib/format-orden";
 
 export interface FilaDashboard {
@@ -27,6 +34,14 @@ export interface ConteoNombre {
   total: number;
 }
 
+export interface ControlWhatsApp {
+  hoy: number;
+  semana: number;
+  porDia: ConteoNombre[];
+  porSemana: ConteoNombre[];
+  porTecnico: ConteoNombre[];
+}
+
 export interface ResumenDashboard {
   porRecuperar: number;
   recuperados: number;
@@ -36,6 +51,13 @@ export interface ResumenDashboard {
   porCiudad: ConteoCiudad[];
   porMotivo: ConteoNombre[];
   porEquipo: ConteoNombre[];
+  whatsapp: ControlWhatsApp;
+}
+
+export interface AvisoDashboard {
+  createdAt: string;
+  rol: string | null;
+  nombre: string | null;
 }
 
 const TOP_CIUDADES = 8;
@@ -206,5 +228,64 @@ export function armarDashboard(filas: FilaDashboard[]): ResumenDashboard {
       "Otros motivos",
     ),
     porEquipo: topConResto([...equipos.entries()], 8, "Otros"),
+    whatsapp: controlWhatsAppVacio(),
+  };
+}
+
+function controlWhatsAppVacio(): ControlWhatsApp {
+  return { hoy: 0, semana: 0, porDia: [], porSemana: [], porTecnico: [] };
+}
+
+function etiquetaDia(ymd: string): string {
+  const dia = nombreDia(ymd).slice(0, 3);
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${fechaCorta(ymd)}`;
+}
+
+export function armarControlWhatsApp(
+  avisos: AvisoDashboard[],
+  tecnicos: Array<{ nombre: string }>,
+  hoy: string,
+): ControlWhatsApp {
+  const porFecha = new Map<string, number>();
+  const porTecnico = new Map<string, { nombre: string; total: number }>();
+
+  for (const tecnico of tecnicos) {
+    const nombre = tecnico.nombre.trim() ? titleCase(tecnico.nombre.trim()) : "Sin nombre";
+    const key = nombre.toLowerCase();
+    if (!porTecnico.has(key)) porTecnico.set(key, { nombre, total: 0 });
+  }
+
+  for (const aviso of avisos) {
+    const fecha = ymdDeIso(aviso.createdAt);
+    if (!fecha) continue;
+    porFecha.set(fecha, (porFecha.get(fecha) ?? 0) + 1);
+    if (aviso.rol !== "tecnico") continue;
+    const nombre = aviso.nombre?.trim() ? titleCase(aviso.nombre.trim()) : "Sin nombre";
+    const key = nombre.toLowerCase();
+    const actual = porTecnico.get(key) ?? { nombre, total: 0 };
+    actual.total += 1;
+    porTecnico.set(key, actual);
+  }
+
+  const inicioActual = inicioSemanaYmd(hoy);
+  const porDia = Array.from({ length: 7 }, (_, index) => {
+    const ymd = sumarDiasYmd(hoy, index - 6);
+    return { nombre: etiquetaDia(ymd), total: porFecha.get(ymd) ?? 0 };
+  });
+  const porSemana = Array.from({ length: 8 }, (_, index) => {
+    const inicio = sumarDiasYmd(inicioActual, (index - 7) * 7);
+    const total = Array.from({ length: 7 }, (__, dia) => porFecha.get(sumarDiasYmd(inicio, dia)) ?? 0)
+      .reduce((sum, value) => sum + value, 0);
+    return { nombre: fechaCorta(inicio), total };
+  });
+
+  return {
+    hoy: porFecha.get(hoy) ?? 0,
+    semana: porSemana[porSemana.length - 1]?.total ?? 0,
+    porDia,
+    porSemana,
+    porTecnico: [...porTecnico.values()].sort(
+      (a, b) => b.total - a.total || a.nombre.localeCompare(b.nombre, "es"),
+    ),
   };
 }

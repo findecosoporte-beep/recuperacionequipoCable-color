@@ -157,6 +157,68 @@ export function PanelDashboard() {
             )}
           </article>
         </section>
+
+        <section className="grid min-w-0 gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="m-0 text-sm font-bold uppercase tracking-wide">Control de WhatsApp</h2>
+              <p className="m-0 mt-1 text-sm text-[var(--text-color-secondary)]">
+                El día y la semana cuentan cada mensaje enviado. La lista de técnicos solo suma los
+                que envió cada usuario técnico.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <article className="rounded-md border border-[var(--surface-200)] bg-white px-4 py-3">
+                <p className="m-0 text-xs font-semibold uppercase text-[#128C7E]">Hoy</p>
+                <p className="m-0 text-2xl font-bold">{loading ? "…" : datos?.whatsapp.hoy ?? 0}</p>
+              </article>
+              <article className="rounded-md border border-[var(--surface-200)] bg-white px-4 py-3">
+                <p className="m-0 text-xs font-semibold uppercase text-[#128C7E]">Esta semana</p>
+                <p className="m-0 text-2xl font-bold">
+                  {loading ? "…" : datos?.whatsapp.semana ?? 0}
+                </p>
+              </article>
+            </div>
+          </div>
+          <div className="grid min-w-0 gap-4 xl:grid-cols-3">
+            <article className="rounded-md border border-[var(--surface-200)] bg-white p-4">
+              <h3 className="m-0 text-sm font-bold uppercase tracking-wide">Por día</h3>
+              {loading ? (
+                <p className="py-10 text-center text-[var(--text-color-secondary)]">Cargando gráfico...</p>
+              ) : (
+                <BarrasSimples
+                  filas={datos?.whatsapp.porDia ?? []}
+                  color="#128C7E"
+                  vacio="Aún no hay mensajes de WhatsApp en estos días."
+                />
+              )}
+            </article>
+            <article className="rounded-md border border-[var(--surface-200)] bg-white p-4">
+              <h3 className="m-0 text-sm font-bold uppercase tracking-wide">Por semana</h3>
+              {loading ? (
+                <p className="py-10 text-center text-[var(--text-color-secondary)]">Cargando gráfico...</p>
+              ) : (
+                <BarrasSimples
+                  filas={datos?.whatsapp.porSemana ?? []}
+                  color="#075E54"
+                  vacio="Aún no hay mensajes de WhatsApp en estas semanas."
+                />
+              )}
+            </article>
+            <article className="rounded-md border border-[var(--surface-200)] bg-white p-4">
+              <h3 className="m-0 text-sm font-bold uppercase tracking-wide">Usuarios técnicos</h3>
+              {loading ? (
+                <p className="py-10 text-center text-[var(--text-color-secondary)]">Cargando gráfico...</p>
+              ) : (
+                <BarrasSimples
+                  filas={datos?.whatsapp.porTecnico ?? []}
+                  color="#5c2d91"
+                  vacio="Aún no hay técnicos activos."
+                />
+              )}
+            </article>
+          </div>
+        </section>
       </main>
     </AppShell>
   );
