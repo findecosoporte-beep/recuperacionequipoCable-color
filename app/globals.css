@@ -160,7 +160,60 @@ body:has(.ordenes-shell) {
 
 .ordenes-shell-content {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow: auto;
+}
+
+@media (max-width: 860px) {
+  body:has(.ordenes-shell) {
+    overflow: auto;
+  }
+
+  .ordenes-shell {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .ordenes-sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--surface-200);
+  }
+
+  .ordenes-sidebar-inner {
+    height: auto;
+  }
+
+  .ordenes-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .ordenes-sidebar-logo {
+    height: 42px;
+    margin-bottom: 0;
+  }
+
+  .ordenes-sidebar-menu.p-menu {
+    flex: none;
+  }
+
+  .ordenes-sidebar-menu .p-menu-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem;
+  }
+
+  .ordenes-shell-main,
+  .ordenes-shell-content {
+    height: auto;
+    overflow: visible;
+  }
 }
 

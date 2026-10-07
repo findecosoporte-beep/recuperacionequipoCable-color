@@ -70,10 +70,10 @@ export function PanelDashboard() {
 
   return (
     <AppShell title="Dashboard" subtitle="Recuperación">
-      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-6 sm:px-6">
+      <main className="grid w-full min-w-0 gap-4 px-3 py-4 sm:px-5 sm:py-5">
         {error ? <Message severity="error" text={error} /> : null}
 
-        <section className="grid gap-3 sm:grid-cols-3">
+        <section className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-3">
           {SERIES.map((serie) => (
             <article
               key={serie.key}
@@ -89,7 +89,7 @@ export function PanelDashboard() {
           ))}
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-[18rem_1fr]">
+        <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(17rem,24rem)_minmax(0,1fr)]">
           <article className="rounded-md border border-[var(--surface-200)] bg-white p-4">
             <h2 className="m-0 text-sm font-bold uppercase tracking-wide">Distribución</h2>
             {loading ? (
@@ -117,7 +117,7 @@ export function PanelDashboard() {
           </article>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-2">
+        <section className="grid min-w-0 gap-4 lg:grid-cols-2">
           <article className="rounded-md border border-[var(--surface-200)] bg-white p-4">
             <h2 className="m-0 text-sm font-bold uppercase tracking-wide">
               Tipos de equipo recuperado
@@ -180,7 +180,7 @@ function Donut({
   let recorrido = 0;
 
   return (
-    <div className="mt-4 grid justify-items-center gap-4">
+    <div className="mt-4 flex w-full min-w-0 flex-col items-center gap-4 sm:flex-row sm:items-center">
       <svg viewBox="0 0 180 180" className="h-52 w-52" role="img" aria-label="Distribución de órdenes">
         <circle cx="90" cy="90" r={radio} fill="none" stroke="#e2e8f0" strokeWidth="22" />
         {total > 0
@@ -211,7 +211,7 @@ function Donut({
           órdenes
         </text>
       </svg>
-      <ul className="m-0 grid w-full gap-2 p-0">
+      <ul className="m-0 grid min-w-0 flex-1 gap-2 p-0">
         {partes.map((parte) => (
           <li key={parte.label} className="flex items-center justify-between text-sm">
             <span className="inline-flex items-center gap-2 font-semibold">
@@ -249,9 +249,9 @@ function BarrasCiudad({ filas }: { filas: ConteoCiudad[] }) {
         const total = fila.recuperados + fila.porAnular + fila.anulados;
         return (
           <div key={fila.ciudad}>
-            <div className="mb-1 flex justify-between text-sm">
-              <span className="font-semibold">{fila.ciudad}</span>
-              <span>{total}</span>
+            <div className="mb-1 flex min-w-0 items-baseline justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate font-semibold">{fila.ciudad}</span>
+              <span className="shrink-0">{total}</span>
             </div>
             <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
               <span style={{ width: `${(fila.recuperados / maximo) * 100}%`, background: "#059669" }} />
@@ -284,9 +284,9 @@ function BarrasSimples({
     <div className="mt-4 grid gap-3">
       {filas.map((fila) => (
         <div key={fila.nombre}>
-          <div className="mb-1 flex justify-between gap-3 text-sm">
-            <span className="font-semibold">{fila.nombre}</span>
-            <span>{fila.total}</span>
+          <div className="mb-1 flex min-w-0 items-baseline justify-between gap-3 text-sm">
+            <span className="min-w-0 break-words font-semibold">{fila.nombre}</span>
+            <span className="shrink-0">{fila.total}</span>
           </div>
           <div className="h-3 overflow-hidden rounded-full bg-slate-100">
             <div
