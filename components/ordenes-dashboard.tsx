@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth-provider";
 import { esAdmin, esRolPanel } from "@/lib/roles";
 import { AppShell } from "@/components/app-shell";
 import { AsignarOrdenDialog, guardarAsignacionOrden } from "@/components/asignar-orden-dialog";
+import { MarcaOrden } from "@/components/marca-orden";
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { OrdenFormModal } from "@/components/orden-form-modal";
 import { accesoriosTexto, comentarioSinAcuse, resumenAcuse } from "@/lib/acuse";
@@ -358,7 +359,16 @@ export function OrdenesDashboard() {
                 return codigo ? <Tag value={codigo} /> : "—";
               }}
             />
-            <Column header="Ciudad" style={{ width: "10%" }} body={(row: Orden) => titleCase(row.ciudad)} />
+            <Column
+              header="Ciudad"
+              style={{ width: "10%" }}
+              body={(row: Orden) => (
+                <div className="flex flex-col items-start gap-1">
+                  <span>{titleCase(row.ciudad)}</span>
+                  <MarcaOrden ciudad={row.ciudad} />
+                </div>
+              )}
+            />
             <Column
               header="Técnico"
               style={{ width: "12%" }}

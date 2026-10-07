@@ -19,9 +19,9 @@ import { apiRequest } from "@/lib/api-client";
 import { formatOrdenNumero, formatTelefono } from "@/lib/format-orden";
 import { imprimirHtml } from "@/lib/imprimir-html";
 import { registrarEnvioWhatsApp } from "@/lib/whatsapp-envio";
-import { useEmpresaWhatsApp } from "@/lib/whatsapp-empresa";
 import {
   destinosWhatsApp,
+  empresaPorCiudad,
   numerosWhatsAppDe,
   urlWhatsApp,
   type DestinoWhatsApp,
@@ -38,8 +38,7 @@ interface Props {
 
 export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Props) {
   const existente = orden ? acuseDeOrden(orden) : null;
-  const { empresa } = useEmpresaWhatsApp();
-  const empresaAcuse = empresaDeAcuse(orden?.tecnico?.empresa ?? empresa);
+  const empresaAcuse = empresaDeAcuse(orden ? empresaPorCiudad(orden.ciudad) : "isg");
   const [form, setForm] = useState<AcuseRecibido | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compartiendo, setCompartiendo] = useState(false);
@@ -206,7 +205,7 @@ export function AcuseReciboDialog({ orden, firma, saving, onClose, onSave }: Pro
           ) : (
             <form onSubmit={submit} className="grid gap-3">
               <p className="m-0 text-sm text-[var(--text-color-secondary)]">
-                Mismo formato que la app del técnico (ISG o Cable Color).
+                Comayagua usa el formato Cable Color. Las demás ciudades usan ISG.
               </p>
               {(
                 [

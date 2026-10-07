@@ -6,16 +6,16 @@ import { Dialog } from "primereact/dialog";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Message } from "primereact/message";
 import { confirmDialog } from "primereact/confirmdialog";
-import { WhatsAppEmpresaSelector } from "@/components/whatsapp-empresa-selector";
+import { MarcaOrden } from "@/components/marca-orden";
 import { apiRequestWithMeta } from "@/lib/api-client";
 import { formatHora } from "@/lib/fecha";
 import { formatOrdenNumero, formatTelefono } from "@/lib/format-orden";
 import type { Orden } from "@/lib/types";
-import { useEmpresaWhatsApp } from "@/lib/whatsapp-empresa";
 import { registrarEnvioWhatsApp } from "@/lib/whatsapp-envio";
 import { recordarAvisoHoy, useAvisosWhatsAppHoy } from "@/lib/whatsapp-hoy-client";
 import {
   destinosWhatsApp,
+  empresaPorCiudad,
   mensajeWhatsApp,
   numerosWhatsAppDe,
   plantillaPorEmpresa,
@@ -33,10 +33,9 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sinTelefono, setSinTelefono] = useState(0);
-  const { empresa } = useEmpresaWhatsApp();
   const { avisoDe } = useAvisosWhatsAppHoy();
   const [destinos, setDestinos] = useState<DestinoWhatsApp[]>([]);
-  const [plantilla, setPlantilla] = useState(() => plantillaPorEmpresa(empresa));
+  const [plantilla, setPlantilla] = useState(() => plantillaPorEmpresa("isg"));
   const [indice, setIndice] = useState(0);
   const [enviados, setEnviados] = useState<string[]>([]);
 
@@ -87,10 +86,6 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
     };
   }, [visible, search]);
 
-  useEffect(() => {
-    setPlantilla(plantillaPorEmpresa(empresa));
-  }, [empresa]);
-
   const actual = destinos[indice] ?? null;
   const preview = useMemo(
     () => (actual ? mensajeWhatsApp(plantilla, actual) : plantilla),
@@ -99,6 +94,11 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
   const avisoHoy = actual
     ? avisoDe({ ordenId: actual.ordenId, telefono: actual.wa })
     : undefined;
+
+  useEffect(() => {
+    if (!actual) return;
+    setPlantilla(plantillaPorEmpresa(empresaPorCiudad(actual.ciudad)));
+  }, [actual]);
 
   function enviarWhatsApp() {
     if (!actual) return;
@@ -110,7 +110,11 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
       numeroOrden: actual.ordenes[0],
       cliente: actual.nombre,
     });
-    void registrarEnvioWhatsApp(actual.ordenId, empresa, actual.wa);
+    void registrarEnvioWhatsApp(
+      actual.ordenId,
+      empresaPorCiudad(actual.ciudad),
+      actual.wa,
+    );
   }
 
   function confirmarSiYaSeEnvioHoy(despues: () => void) {
@@ -166,7 +170,16 @@ export function WhatsAppPorRecuperarDialog({ visible, search, onClose }: Props) 
         ) : null}
         {error ? <Message severity="error" text={error} /> : null}
 
-        <WhatsAppEmpresaSelector compact />
+        {actual ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span>Este mensaje se envía como</span>
+            <MarcaOrden ciudad={actual.ciudad} />
+          </div>
+        ) : (
+          <p className="m-0 text-sm text-[var(--text-color-secondary)]">
+            Comayagua sale como Cable Color. Las demás ciudades salen como ISG.
+          </p>
+        )}
 
         {!loading && !error ? (
           <p className="m-0 text-sm">

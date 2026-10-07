@@ -16,7 +16,7 @@ import { AsignarOrdenDialog, guardarAsignacionOrden } from "@/components/asignar
 import { MarcarRecuperadaDialog } from "@/components/marcar-recuperada-dialog";
 import { MotivoAnulacionDialog } from "@/components/motivo-anulacion-dialog";
 import { AcuseReciboDialog } from "@/components/acuse-recibo-dialog";
-import { WhatsAppEmpresaSelector } from "@/components/whatsapp-empresa-selector";
+import { MarcaOrden } from "@/components/marca-orden";
 import { WhatsAppOrdenButton } from "@/components/whatsapp-orden-button";
 import { WhatsAppPorRecuperarDialog } from "@/components/whatsapp-por-recuperar-dialog";
 import { WhatsAppPorSemana } from "@/components/whatsapp-por-semana";
@@ -463,9 +463,10 @@ export function EstadoDashboard() {
               <p className="mt-1 mb-0 text-sm text-[var(--text-color-secondary)]">
                 Mensaje personalizado al Teléfono 1 y Teléfono 2 de cada cliente, uno por uno.
               </p>
-              <div className="mt-2">
-                <WhatsAppEmpresaSelector compact />
-              </div>
+              <p className="mt-2 mb-0 text-sm">
+                Comayagua se envía como <MarcaOrden ciudad="Comayagua" /> y las demás ciudades
+                como <MarcaOrden ciudad="Tegucigalpa" />.
+              </p>
             </div>
             <Button
               type="button"
@@ -539,7 +540,16 @@ export function EstadoDashboard() {
                 return codigo ? <Tag value={codigo} /> : "—";
               }}
             />
-            <Column header="Ciudad" style={{ width: "12%" }} body={(row: Orden) => titleCase(row.ciudad)} />
+            <Column
+              header="Ciudad"
+              style={{ width: "12%" }}
+              body={(row: Orden) => (
+                <div className="flex flex-col items-start gap-1">
+                  <span>{titleCase(row.ciudad)}</span>
+                  <MarcaOrden ciudad={row.ciudad} />
+                </div>
+              )}
+            />
             {filtro === "por_recuperar" ? (
               <Column
                 header="Técnico"

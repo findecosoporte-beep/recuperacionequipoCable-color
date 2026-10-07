@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Message } from "primereact/message";
 import { useAuth } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
+import { MarcaOrden } from "@/components/marca-orden";
 import { apiRequest } from "@/lib/api-client";
 import type { ConteoCiudad, ConteoNombre, ResumenDashboard } from "@/lib/dashboard";
 import { esRolPanel } from "@/lib/roles";
@@ -324,7 +325,10 @@ function BarrasCiudad({ filas }: { filas: ConteoCiudad[] }) {
         return (
           <div key={fila.ciudad}>
             <div className="mb-1 flex min-w-0 items-baseline justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate font-semibold">{fila.ciudad}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-semibold">{fila.ciudad}</span>
+                <MarcaOrden ciudad={fila.ciudad} />
+              </span>
               <span className="shrink-0">{total}</span>
             </div>
             <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">

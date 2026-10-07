@@ -19,6 +19,34 @@ export function etiquetaEmpresa(empresa: EmpresaWhatsApp): string {
   return empresa === "cable_color" ? "Cable Color" : "ISG";
 }
 
+export const MARCA_ORDEN: Record<
+  EmpresaWhatsApp,
+  { label: string; color: string; fondo: string; texto: string }
+> = {
+  cable_color: {
+    label: "Cable Color",
+    color: "#5c2d91",
+    fondo: "#f3eaf9",
+    texto: "#3e1e63",
+  },
+  isg: {
+    label: "ISG",
+    color: "#0b3d91",
+    fondo: "#e7f0fb",
+    texto: "#0b3d91",
+  },
+};
+
+export function empresaPorCiudad(ciudad: string | null | undefined): EmpresaWhatsApp {
+  const normal = (ciudad ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+  if (normal === "COMAYAGUA" || normal.startsWith("COMAYAGUA ")) return "cable_color";
+  return "isg";
+}
+
 export function plantillaPorEmpresa(empresa: EmpresaWhatsApp = EMPRESA_WHATSAPP_DEFAULT): string {
   return `Hola {nombre}, le escribimos de ${etiquetaEmpresa(empresa)}. Tenemos pendiente la recuperación de equipo de su servicio (orden {orden}) en {colonia}, {ciudad}. Un técnico pasará a recogerlo. Si ya lo entregó o tiene dudas, responda este mensaje. Gracias.`;
 }
@@ -112,7 +140,7 @@ export function urlWhatsApp(wa: string, texto: string): string {
 
 export function enlacesWhatsAppOrden(
   orden: Orden,
-  plantilla = plantillaPorEmpresa(),
+  plantilla = plantillaPorEmpresa(empresaPorCiudad(orden.ciudad)),
 ): string[] {
   return destinosWhatsApp([orden]).map((destino) =>
     urlWhatsApp(destino.wa, mensajeWhatsApp(plantilla, destino)),
@@ -121,7 +149,7 @@ export function enlacesWhatsAppOrden(
 
 export function enlaceWhatsAppOrden(
   orden: Orden,
-  plantilla = plantillaPorEmpresa(),
+  plantilla = plantillaPorEmpresa(empresaPorCiudad(orden.ciudad)),
 ): string | null {
   return enlacesWhatsAppOrden(orden, plantilla)[0] ?? null;
 }

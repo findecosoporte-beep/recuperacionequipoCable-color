@@ -7,6 +7,7 @@ import {
   mensajeWhatsApp,
   numeroWhatsApp,
   numerosWhatsAppDe,
+  empresaPorCiudad,
   plantillaPorEmpresa,
   telefonoWhatsApp1,
   urlWhatsApp,
@@ -70,6 +71,21 @@ describe("whatsapp", () => {
     });
     assert.equal(texto, "Hola Ana Ruiz, orden 1001 en Tegucigalpa");
     assert.ok(urlWhatsApp("50499887766", texto).startsWith("https://wa.me/50499887766?text="));
+  });
+
+  it("marca Comayagua como Cable Color y el resto como ISG", () => {
+    assert.equal(empresaPorCiudad("COMAYAGUA"), "cable_color");
+    assert.equal(empresaPorCiudad("Comayagua"), "cable_color");
+    assert.equal(empresaPorCiudad("Tegucigalpa"), "isg");
+    const url = enlaceWhatsAppOrden(
+      orden({
+        orden: "1001",
+        cliente: "Ana Ruiz",
+        telefono: "92763326",
+        ciudad: "Comayagua",
+      }),
+    );
+    assert.ok(url?.includes(encodeURIComponent("Cable Color")));
   });
 
   it("escribe ISG o Cable Color según el cliente del mensaje", () => {
