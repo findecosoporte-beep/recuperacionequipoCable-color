@@ -22,19 +22,19 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
   const items = useMemo<MenuItem[]>(
     () => [
       {
-        label: "Órdenes",
-        icon: "pi pi-list",
-        className: pathname === "/" ? "ordenes-menu-active" : undefined,
-        command: () => {
-          router.push("/");
-        },
-      },
-      {
         label: "Dashboard",
         icon: "pi pi-chart-pie",
         className: pathname === "/dashboard" ? "ordenes-menu-active" : undefined,
         command: () => {
           router.push("/dashboard");
+        },
+      },
+      {
+        label: "Órdenes",
+        icon: "pi pi-list",
+        className: pathname === "/" ? "ordenes-menu-active" : undefined,
+        command: () => {
+          router.push("/");
         },
       },
       {
